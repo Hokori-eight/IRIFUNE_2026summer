@@ -32,73 +32,31 @@
     padding: 18px 16px 32px;
   }
   header { text-align: center; margin: 2px 0 16px; }
-  h1 {
-    font-size: 22px;
-    font-weight: 700;
-    margin: 0;
-    letter-spacing: 0.02em;
-  }
-  .sub {
-    font-size: 11px;
-    color: var(--gray);
-    margin-top: 6px;
-    letter-spacing: 0.14em;
-  }
-  .status {
-    max-width: 420px;
+  h1 { font-size: 22px; font-weight: 700; margin: 0; letter-spacing: 0.02em; }
+  .site-footer {
+    margin-top: 26px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(70,40,20,0.14);
     width: 100%;
+    max-width: 420px;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
+    font-size: 11.5px;
+    letter-spacing: 0.14em;
+    color: var(--gray);
+  }
+  .footer-logo { width: 26px; height: 26px; object-fit: contain; mix-blend-mode: multiply; }
+  .status {
+    max-width: 420px;
+    width: 100%;
+    text-align: center;
     margin-bottom: 12px;
     font-size: 13px;
     font-weight: 500;
   }
-  .board-wrap {
-    position: relative;
-    width: 100%;
-    max-width: 420px;
-  }
-  .stamp {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 46%;
-    aspect-ratio: 1 / 1;
-    transform: translate(-50%, -50%) rotate(-14deg);
-    border: 6px solid var(--stamp);
-    border-radius: 50%;
-    color: var(--stamp);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    pointer-events: none;
-    z-index: 5;
-    /* 写真の上でも読めるよう、生成り色のフチを回す */
-    box-shadow: 0 0 0 3px rgba(255,253,243,0.8), inset 0 0 0 3px rgba(255,253,243,0.8);
-    text-shadow: 0 0 7px rgba(255,253,243,0.95), 0 0 3px rgba(255,253,243,1);
-  }
-  .stamp[hidden] { display: none; }
-  .stamp-main {
-    font-size: clamp(22px, 7.2vw, 34px);
-    font-weight: 700;
-    line-height: 1;
-    letter-spacing: 0.02em;
-  }
-  .stamp-sub {
-    font-size: clamp(9px, 2.6vw, 12px);
-    font-weight: 700;
-    margin-top: 6px;
-    letter-spacing: 0.16em;
-  }
-  .stamp.pop { animation: stampIn 0.45s cubic-bezier(0.2, 1.4, 0.4, 1); }
-  @keyframes stampIn {
-    0%   { transform: translate(-50%,-50%) rotate(-14deg) scale(2.6); opacity: 0; }
-    55%  { opacity: 1; }
-    100% { transform: translate(-50%,-50%) rotate(-14deg) scale(1);   opacity: 1; }
-  }
+  .board-wrap { position: relative; width: 100%; max-width: 420px; }
   .board {
     width: 100%;
     aspect-ratio: 1 / 1;
@@ -109,6 +67,24 @@
     background: var(--brown);
     padding: 6px;
     border-radius: 14px;
+  }
+  /* スタンプは canvas で作った画像。盤面いっぱいに重ねる */
+  #stampImg {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 100%;
+    transform: translate(-50%, -50%) rotate(-13deg);
+    pointer-events: none;
+    z-index: 5;
+    filter: drop-shadow(0 0 5px rgba(255,253,243,0.5));
+  }
+  #stampImg[hidden] { display: none; }
+  #stampImg.pop { animation: stampIn 0.42s cubic-bezier(0.2, 1.5, 0.4, 1); }
+  @keyframes stampIn {
+    0%   { transform: translate(-50%,-50%) rotate(-13deg) scale(2.4); opacity: 0; }
+    55%  { opacity: 1; }
+    100% { transform: translate(-50%,-50%) rotate(-13deg) scale(1);   opacity: 1; }
   }
   .cell {
     position: relative;
@@ -124,13 +100,7 @@
     transition: transform 0.1s;
   }
   .cell:active { transform: scale(0.97); }
-  .cell img {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
+  .cell img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
   .cell .topic-text {
     position: relative;
     z-index: 1;
@@ -143,9 +113,7 @@
   }
   .cell.has-photo .topic-text {
     position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    left: 0; right: 0; bottom: 0;
     z-index: 2;
     color: var(--base);
     background: linear-gradient(transparent, rgba(70,40,20,0.92));
@@ -155,8 +123,7 @@
   .cell.center { background: var(--land); }
   .cell .badge {
     position: absolute;
-    top: 6px;
-    left: 50%;
+    top: 6px; left: 50%;
     transform: translateX(-50%);
     z-index: 3;
     background: var(--brown);
@@ -183,13 +150,7 @@
   }
   .cell.center.has-photo input.topic-input { display: none; }
   .file-input { display: none; }
-  .controls {
-    display: flex;
-    gap: 10px;
-    margin-top: 18px;
-    width: 100%;
-    max-width: 420px;
-  }
+  .controls { display: flex; gap: 10px; margin-top: 18px; width: 100%; max-width: 420px; }
   button {
     padding: 13px 8px;
     font-size: 15px;
@@ -205,11 +166,7 @@
     color: var(--brown);
     box-shadow: inset 0 0 0 1.5px var(--brown);
   }
-  #saveBtn {
-    flex: 1;
-    background: var(--sea);
-    color: #fff;
-  }
+  #saveBtn { flex: 1; background: var(--sea); color: #fff; }
   #saveBtn:disabled { opacity: 0.5; }
   .hint {
     margin-top: 16px;
@@ -220,36 +177,78 @@
     max-width: 420px;
   }
   .hint strong { color: var(--brown); font-weight: 700; }
+
+  /* 写真を撮ったマスをタップしたときの操作シート */
+  .sheet-back {
+    position: fixed;
+    inset: 0;
+    background: rgba(70,40,20,0.5);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    z-index: 50;
+    padding: 16px;
+  }
+  .sheet-back[hidden] { display: none; }
+  .sheet {
+    width: 100%;
+    max-width: 420px;
+    background: var(--base);
+    border-radius: 14px;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .sheet .sheet-title {
+    text-align: center;
+    font-size: 12px;
+    color: var(--gray);
+    padding: 10px 4px 6px;
+  }
+  .sheet button { width: 100%; }
+  .sheet .primary { background: var(--sea); color: #fff; }
+  .sheet .plain   { background: transparent; color: var(--brown); box-shadow: inset 0 0 0 1.5px var(--brown); }
+  .sheet .quiet   { background: transparent; color: var(--gray); font-weight: 500; }
 </style>
 </head>
 <body>
 
 <header>
   <h1>#勝山発掘まちあるき</h1>
-  <div class="sub">まちの発掘拠点 IRIFUNE</div>
 </header>
 
-<div class="status">
-  <span id="count">0 / 9 発掘</span>
-</div>
+<div class="status"><span id="count">0 / 9 発掘</span></div>
 
 <div class="board-wrap">
   <div class="board" id="board"></div>
-  <div class="stamp" id="stamp" hidden>
-    <span class="stamp-main">CLEAR!</span>
-    <span class="stamp-sub" id="stampSub">BINGO</span>
-  </div>
+  <img id="stampImg" alt="CLEAR" hidden>
 </div>
 
 <div class="controls">
   <button id="resetBtn">リセット</button>
-  <button id="saveBtn">画像を保存</button>
+  <button id="saveBtn">シートを保存</button>
 </div>
 
 <p class="hint">
   マスをタップして写真を撮ろう。中央は自由に決められる<strong>発掘マス</strong>。<br>
-  <strong>ページを閉じると消えます。</strong>完成したら必ず保存してね。
+  撮った写真は<strong>もう一度マスをタップ</strong>すると端末に保存できます。<br>
+  <strong>ページを閉じると消えます。</strong>
 </p>
+
+<footer class="site-footer">
+  <img src="logo.png" alt="" class="footer-logo">
+  <span>まちの発掘拠点 IRIFUNE</span>
+</footer>
+
+<div class="sheet-back" id="sheetBack" hidden>
+  <div class="sheet">
+    <div class="sheet-title" id="sheetTitle"></div>
+    <button class="primary" id="savePhotoBtn">この写真を端末に保存</button>
+    <button class="plain"   id="retakeBtn">撮り直す</button>
+    <button class="quiet"   id="cancelBtn">キャンセル</button>
+  </div>
+</div>
 
 <script>
 /* 改行したい位置に \n を入れると、その位置で必ず折り返します */
@@ -268,6 +267,7 @@ const CENTER_INDEX = 4;
 const CENTER_LABEL = "発掘マス";
 const TITLE = "#勝山発掘まちあるき";
 const SUBTITLE = "まちの発掘拠点 IRIFUNE";
+const LOGO_SRC = "logo.png";
 
 /* IRIFUNE ブランドトークン（k-irifune.com と共通） */
 const C = {
@@ -286,6 +286,7 @@ const LINES = [
   [0,4,8],[2,4,6]
 ];
 
+/* cell = { topic, file: 撮影した元ファイル, photo: 表示用に縮小した dataURL } */
 let cells = [];
 
 function shuffle(arr) {
@@ -303,37 +304,173 @@ function initCells() {
   let idx = 0;
   for (let i = 0; i < 9; i++) {
     if (i === CENTER_INDEX) {
-      cells.push({ topic: "", photo: null, isCenter: true });
+      cells.push({ topic: "", file: null, photo: null, isCenter: true });
     } else {
-      cells.push({ topic: shuffled[idx++], photo: null, isCenter: false });
+      cells.push({ topic: shuffled[idx++], file: null, photo: null, isCenter: false });
     }
   }
 }
 
-function filledCount() {
-  return cells.filter(c => c.photo).length;
+function filledCount() { return cells.filter(c => c.photo).length; }
+function bingoLines() { return LINES.filter(line => line.every(i => cells[i].photo)); }
+
+function loadImage(src) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
 }
 
-function bingoLines() {
-  return LINES.filter(line => line.every(i => cells[i].photo));
+/* 端末に保存する元画像はそのまま持ち、表示用だけ縮小してメモリを抑える */
+async function toDisplayDataUrl(file, max = 1500) {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await loadImage(url);
+    const scale = Math.min(1, max / Math.max(img.width, img.height));
+    const w = Math.round(img.width * scale);
+    const h = Math.round(img.height * scale);
+    const cv = document.createElement("canvas");
+    cv.width = w; cv.height = h;
+    cv.getContext("2d").drawImage(img, 0, 0, w, h);
+    return cv.toDataURL("image/jpeg", 0.9);
+  } finally {
+    URL.revokeObjectURL(url);
+  }
 }
 
-/* スタンプの押下アニメは、ライン数が増えた瞬間だけ再生する */
-let prevBingo = 0;
+/* ---------- CLEAR スタンプ ---------- */
+
+/* 掠れ具合を毎回同じにするための擬似乱数 */
+function mulberry32(seed) {
+  return function () {
+    seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+    let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+let logoMask  = null;  /* スタンプ用（朱色） */
+let logoBrown = null;  /* フッター用（濃茶） */
+
+/* 白地・濃色のロゴPNGを、明るさからアルファを起こして任意の一色に置き換える */
+function tintLogo(img, r, g, b) {
+  const S = 512;
+  const cv = document.createElement("canvas");
+  cv.width = cv.height = S;
+  const x = cv.getContext("2d");
+  x.drawImage(img, 0, 0, S, S);
+  const d = x.getImageData(0, 0, S, S);
+  const p = d.data;
+  for (let i = 0; i < p.length; i += 4) {
+    const lum = (p[i] * 0.299 + p[i+1] * 0.587 + p[i+2] * 0.114) / 255;
+    p[i+3] = Math.round(Math.max(0, 1 - lum) * 255);
+    p[i] = r; p[i+1] = g; p[i+2] = b;
+  }
+  x.putImageData(d, 0, 0);
+  return cv;
+}
+
+const stampCache = new Map();
+
+function makeStampCanvas(subText) {
+  if (stampCache.has(subText)) return stampCache.get(subText);
+
+  const S = 1400;
+  const cv = document.createElement("canvas");
+  cv.width = cv.height = S;
+  const x = cv.getContext("2d");
+  const cx = S / 2, cy = S / 2, r = S * 0.40;
+
+  x.strokeStyle = C.stamp;
+  x.fillStyle = C.stamp;
+  x.textAlign = "center";
+  x.textBaseline = "middle";
+
+  // 二重の外枠
+  x.lineWidth = S * 0.030;
+  x.beginPath(); x.arc(cx, cy, r, 0, Math.PI * 2); x.stroke();
+  x.lineWidth = S * 0.010;
+  x.beginPath(); x.arc(cx, cy, r * 0.885, 0, Math.PI * 2); x.stroke();
+
+  // IRIFUNE のシンボルマーク
+  if (logoMask) {
+    const lw = S * 0.30, lh = lw;
+    x.drawImage(logoMask, cx - lw / 2, cy - S * 0.245 - lh / 2, lw, lh);
+  }
+
+  x.font = `700 ${Math.round(S * 0.185)}px Inter, "Noto Sans JP", sans-serif`;
+  x.fillText("CLEAR!", cx, cy + S * 0.045);
+
+  // 区切り線
+  x.lineWidth = S * 0.006;
+  x.beginPath();
+  x.moveTo(cx - S * 0.15, cy + S * 0.145);
+  x.lineTo(cx + S * 0.15, cy + S * 0.145);
+  x.stroke();
+
+  x.font = `700 ${Math.round(S * 0.055)}px Inter, "Noto Sans JP", sans-serif`;
+  x.fillText(subText, cx, cy + S * 0.205);
+
+  // ここから掠れ表現：描いたインクを部分的に削り取る。
+  // 実際のハンコは外周ほどインクが乗りにくいので、削りを外側に寄せて中心の文字は残す
+  const rnd = mulberry32(20260728);
+  x.globalCompositeOperation = "destination-out";
+
+  const outward = () => r * (0.45 + 0.62 * rnd());  // 外周寄りの半径
+  const anywhere = () => r * Math.sqrt(rnd()) * 1.05;
+
+  // 外周のインク欠け
+  for (let i = 0; i < 46; i++) {
+    const a = rnd() * Math.PI * 2, d = outward();
+    x.beginPath();
+    x.arc(cx + Math.cos(a) * d, cy + Math.sin(a) * d, S * (0.004 + rnd() * 0.020), 0, Math.PI * 2);
+    x.fill();
+  }
+  // 全体に散る細かい擦れ
+  for (let i = 0; i < 900; i++) {
+    const a = rnd() * Math.PI * 2, d = anywhere();
+    x.beginPath();
+    x.arc(cx + Math.cos(a) * d, cy + Math.sin(a) * d, S * (0.0010 + rnd() * 0.0032), 0, Math.PI * 2);
+    x.fill();
+  }
+  // 押しムラらしい細い筋（外周中心に、短く）
+  x.lineCap = "round";
+  for (let i = 0; i < 9; i++) {
+    const a = rnd() * Math.PI * 2, d = outward();
+    const px = cx + Math.cos(a) * d, py = cy + Math.sin(a) * d;
+    const len = S * (0.04 + rnd() * 0.10), ang = -0.35 + rnd() * 0.7;
+    x.lineWidth = S * (0.0015 + rnd() * 0.0045);
+    x.beginPath();
+    x.moveTo(px, py);
+    x.lineTo(px + Math.cos(ang) * len, py + Math.sin(ang) * len);
+    x.stroke();
+  }
+  x.globalCompositeOperation = "source-over";
+
+  stampCache.set(subText, cv);
+  return cv;
+}
 
 function stampSubText(lines, n) {
   if (n === 9) return "コンプリート";
   return lines > 1 ? `${lines} LINES` : "BINGO";
 }
 
+/* ---------- 表示 ---------- */
+
+let prevBingo = 0;
+
 function updateStatus() {
   const n = filledCount();
   document.getElementById("count").textContent = `${n} / 9 発掘`;
 
   const lines = bingoLines().length;
-  const stamp = document.getElementById("stamp");
+  const stamp = document.getElementById("stampImg");
   if (lines > 0) {
-    document.getElementById("stampSub").textContent = stampSubText(lines, n);
+    stamp.src = makeStampCanvas(stampSubText(lines, n)).toDataURL("image/png");
     stamp.hidden = false;
     if (lines > prevBingo) {
       stamp.classList.remove("pop");
@@ -350,7 +487,7 @@ function updateStatus() {
 function render() {
   const board = document.getElementById("board");
   board.innerHTML = "";
-  cells.forEach((cell) => {
+  cells.forEach((cell, index) => {
     const div = document.createElement("div");
     div.className = "cell" + (cell.isCenter ? " center" : "") + (cell.photo ? " has-photo" : "");
 
@@ -388,34 +525,84 @@ function render() {
     fileInput.accept = "image/*";
     fileInput.capture = "environment";
     fileInput.className = "file-input";
-    fileInput.addEventListener("change", (e) => {
+    fileInput.addEventListener("change", async (e) => {
       const file = e.target.files[0];
       if (!file) return;
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        cell.photo = ev.target.result;
-        render();
-      };
-      reader.readAsDataURL(file);
+      cell.file = file;
+      cell.photo = await toDisplayDataUrl(file);
+      render();
     });
     div.appendChild(fileInput);
 
-    div.addEventListener("click", () => fileInput.click());
+    // 写真がまだなら撮影へ、あるなら保存/撮り直しの選択へ
+    div.addEventListener("click", () => {
+      if (cell.photo) openSheet(index);
+      else fileInput.click();
+    });
+    div._fileInput = fileInput;
+
     board.appendChild(div);
   });
   updateStatus();
 }
 
-/* ---------- 保存用画像の生成 ---------- */
+/* ---------- 撮影済みマスの操作 ---------- */
 
-function loadImage(src) {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => resolve(img);
-    img.onerror = reject;
-    img.src = src;
-  });
+let sheetIndex = null;
+
+function openSheet(index) {
+  sheetIndex = index;
+  const cell = cells[index];
+  document.getElementById("sheetTitle").textContent =
+    (cell.topic || CENTER_LABEL).replace(/\n/g, "") + " の写真";
+  document.getElementById("sheetBack").hidden = false;
 }
+
+function closeSheet() {
+  document.getElementById("sheetBack").hidden = true;
+  sheetIndex = null;
+}
+
+document.getElementById("cancelBtn").addEventListener("click", closeSheet);
+document.getElementById("sheetBack").addEventListener("click", (e) => {
+  if (e.target.id === "sheetBack") closeSheet();
+});
+
+document.getElementById("retakeBtn").addEventListener("click", () => {
+  const board = document.getElementById("board");
+  const div = board.children[sheetIndex];
+  closeSheet();
+  if (div && div._fileInput) div._fileInput.click();
+});
+
+/* 共有シート経由で端末に保存する。非対応環境ではダウンロードにする */
+async function saveFileToDevice(file, fallbackName) {
+  const data = { files: [file] };
+  if (navigator.canShare && navigator.canShare(data)) {
+    await navigator.share(data);
+    return;
+  }
+  const url = URL.createObjectURL(file);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = fallbackName;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+document.getElementById("savePhotoBtn").addEventListener("click", async () => {
+  const cell = cells[sheetIndex];
+  const label = (cell.topic || CENTER_LABEL).replace(/\n/g, "");
+  closeSheet();
+  if (!cell.file) return;
+  try {
+    await saveFileToDevice(cell.file, `katsuyama-${label}.jpg`);
+  } catch (err) {
+    if (err && err.name !== "AbortError") alert("保存できませんでした。もう一度お試しください。");
+  }
+});
+
+/* ---------- 保存用のシート画像 ---------- */
 
 function roundRectPath(ctx, x, y, w, h, r) {
   if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); return; }
@@ -454,39 +641,6 @@ function drawCenteredText(ctx, text, cx, cy, maxWidth, lineHeight) {
   lines.forEach((l, i) => ctx.fillText(l, cx, startY + i * lineHeight));
 }
 
-/* 盤面の中央に CLEAR スタンプを押す */
-function drawStamp(ctx, cx, cy, r, subText) {
-  ctx.save();
-  ctx.translate(cx, cy);
-  ctx.rotate(-14 * Math.PI / 180);
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-
-  // 写真の上でも読めるように、生成り色のフチを回す
-  ctx.shadowColor = "rgba(255,253,243,0.95)";
-  ctx.shadowBlur = 14;
-
-  ctx.strokeStyle = C.stamp;
-  ctx.lineWidth = r * 0.075;
-  ctx.beginPath();
-  ctx.arc(0, 0, r, 0, Math.PI * 2);
-  ctx.stroke();
-
-  ctx.lineWidth = r * 0.028;
-  ctx.beginPath();
-  ctx.arc(0, 0, r * 0.87, 0, Math.PI * 2);
-  ctx.stroke();
-
-  ctx.fillStyle = C.stamp;
-  ctx.font = `700 ${Math.round(r * 0.46)}px Inter, "Noto Sans JP", sans-serif`;
-  ctx.fillText("CLEAR!", 0, -r * 0.08);
-
-  ctx.font = `700 ${Math.round(r * 0.155)}px Inter, "Noto Sans JP", sans-serif`;
-  ctx.fillText(subText, 0, r * 0.34);
-
-  ctx.restore();
-}
-
 function drawPhotoCover(ctx, img, x, y, w, h) {
   const imgRatio = img.width / img.height;
   const boxRatio = w / h;
@@ -504,14 +658,15 @@ async function buildImage() {
   await document.fonts.load('500 26px "Noto Sans JP"');
   await document.fonts.ready;
 
-  const W = 1080;
-  const PAD = 44;
-  const GAP = 12;
-  const HEADER = 186;
-  const FOOTER = 112;
+  const W = 1620;            // 1マスあたり約520px
+  const k = W / 1080;        // 従来比の拡大率
+  const PAD = 44 * k;
+  const GAP = 12 * k;
+  const HEADER = 186 * k;
+  const FOOTER = 156 * k;
   const grid = W - PAD * 2;
   const box = (grid - GAP * 2) / 3;
-  const H = HEADER + grid + FOOTER;
+  const H = Math.round(HEADER + grid + FOOTER);
 
   const canvas = document.createElement("canvas");
   canvas.width = W;
@@ -520,36 +675,30 @@ async function buildImage() {
 
   ctx.fillStyle = C.base;
   ctx.fillRect(0, 0, W, H);
-
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
 
   // ヘッダー
   ctx.fillStyle = C.brown;
-  ctx.font = '700 54px Inter, "Noto Sans JP", sans-serif';
-  ctx.fillText(TITLE, W / 2, 62);
-
-  ctx.fillStyle = C.gray;
-  ctx.font = '500 23px Inter, "Noto Sans JP", sans-serif';
-  ctx.fillText(SUBTITLE, W / 2, 110);
+  ctx.font = `700 ${54 * k}px Inter, "Noto Sans JP", sans-serif`;
+  ctx.fillText(TITLE, W / 2, 74 * k);
 
   // 進捗バッジ（CLEAR はスタンプで示すので、ここは発掘数だけ）
   const n = filledCount();
   const lines = bingoLines().length;
   const statusText = `${n} / 9 発掘`;
-
-  ctx.font = '700 26px Inter, "Noto Sans JP", sans-serif';
-  const tw = ctx.measureText(statusText).width;
-  const bw = tw + 46, bh = 44, bx = (W - bw) / 2, by = 134;
-  ctx.fillStyle = lines > 0 ? C.sea : C.land;
+  ctx.font = `700 ${26 * k}px Inter, "Noto Sans JP", sans-serif`;
+  const bw = ctx.measureText(statusText).width + 46 * k;
+  const bh = 44 * k, bx = (W - bw) / 2, by = 134 * k;
+  ctx.fillStyle = C.land;
   roundRectPath(ctx, bx, by, bw, bh, bh / 2);
   ctx.fill();
-  ctx.fillStyle = lines > 0 ? "#FFFFFF" : C.brown;
+  ctx.fillStyle = C.brown;
   ctx.fillText(statusText, W / 2, by + bh / 2 + 1);
 
   // 盤面の下地
   ctx.fillStyle = C.brown;
-  roundRectPath(ctx, PAD - 9, HEADER - 9, grid + 18, grid + 18, 20);
+  roundRectPath(ctx, PAD - 9 * k, HEADER - 9 * k, grid + 18 * k, grid + 18 * k, 20 * k);
   ctx.fill();
 
   const imgs = await Promise.all(cells.map(c => c.photo ? loadImage(c.photo) : null));
@@ -560,46 +709,69 @@ async function buildImage() {
     const img = imgs[i];
 
     ctx.save();
-    roundRectPath(ctx, x, y, box, box, 12);
+    roundRectPath(ctx, x, y, box, box, 12 * k);
     ctx.clip();
 
     if (img) {
       drawPhotoCover(ctx, img, x, y, box, box);
-      const bandH = 64;
+      const bandH = 64 * k;
       const grad = ctx.createLinearGradient(0, y + box - bandH, 0, y + box);
       grad.addColorStop(0, "rgba(70,40,20,0)");
       grad.addColorStop(1, "rgba(70,40,20,0.93)");
       ctx.fillStyle = grad;
       ctx.fillRect(x, y + box - bandH, box, bandH);
       ctx.fillStyle = C.base;
-      ctx.font = '500 21px Inter, "Noto Sans JP", sans-serif';
-      drawCenteredText(ctx, cell.topic || CENTER_LABEL, x + box / 2, y + box - 26, box - 20, 24);
+      ctx.font = `500 ${21 * k}px Inter, "Noto Sans JP", sans-serif`;
+      drawCenteredText(ctx, cell.topic || CENTER_LABEL, x + box / 2, y + box - 26 * k, box - 20 * k, 24 * k);
     } else {
       ctx.fillStyle = cell.isCenter ? C.land : C.base;
       ctx.fillRect(x, y, box, box);
       ctx.fillStyle = C.brown;
-      ctx.font = '500 26px Inter, "Noto Sans JP", sans-serif';
-      drawCenteredText(ctx, cell.topic || (cell.isCenter ? CENTER_LABEL : ""), x + box / 2, y + box / 2, box - 34, 34);
+      ctx.font = `500 ${26 * k}px Inter, "Noto Sans JP", sans-serif`;
+      drawCenteredText(ctx, cell.topic || (cell.isCenter ? CENTER_LABEL : ""), x + box / 2, y + box / 2, box - 34 * k, 34 * k);
     }
     ctx.restore();
   });
 
-  // ビンゴ成立時は盤面中央に CLEAR スタンプ
+  // ビンゴ成立時は盤面いっぱいに CLEAR スタンプ
   if (lines > 0) {
-    drawStamp(ctx, W / 2, HEADER + grid / 2, grid * 0.21, stampSubText(lines, n));
+    const stamp = makeStampCanvas(stampSubText(lines, n));
+    const size = grid * 1.04;
+    ctx.save();
+    ctx.translate(W / 2, HEADER + grid / 2);
+    ctx.rotate(-13 * Math.PI / 180);
+    ctx.globalAlpha = 0.92;
+    ctx.drawImage(stamp, -size / 2, -size / 2, size, size);
+    ctx.restore();
   }
 
   // フッター（ハッシュタグはタイトルと重複するので置かない）
   const d = new Date();
   const dateStr = `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
+  const fy = HEADER + grid;
+
   ctx.fillStyle = C.gray;
-  ctx.font = '500 24px Inter, "Noto Sans JP", sans-serif';
-  ctx.fillText(`${dateStr}　福井県勝山市`, W / 2, HEADER + grid + 62);
+  ctx.font = `500 ${23 * k}px Inter, "Noto Sans JP", sans-serif`;
+  ctx.fillText(`${dateStr}　福井県勝山市`, W / 2, fy + 50 * k);
 
-  return new Promise(resolve => canvas.toBlob(resolve, "image/png"));
+  // ロゴ＋ハウスネームを最下部に置く
+  ctx.fillStyle = C.brown;
+  ctx.font = `500 ${24 * k}px Inter, "Noto Sans JP", sans-serif`;
+  const houseText = SUBTITLE;
+  const logoSize = 34 * k;
+  const textW = ctx.measureText(houseText).width;
+  const totalW = (logoBrown ? logoSize + 12 * k : 0) + textW;
+  const startX = (W - totalW) / 2;
+  const houseY = fy + 108 * k;
+  if (logoBrown) {
+    ctx.drawImage(logoBrown, startX, houseY - logoSize / 2, logoSize, logoSize);
+  }
+  ctx.textAlign = "left";
+  ctx.fillText(houseText, startX + (logoBrown ? logoSize + 12 * k : 0), houseY);
+  ctx.textAlign = "center";
+
+  return new Promise(resolve => canvas.toBlob(resolve, "image/jpeg", 0.92));
 }
-
-/* ---------- 保存 / 共有 ---------- */
 
 document.getElementById("saveBtn").addEventListener("click", async (e) => {
   const btn = e.currentTarget;
@@ -608,25 +780,20 @@ document.getElementById("saveBtn").addEventListener("click", async (e) => {
   btn.textContent = "作成中...";
   try {
     const blob = await buildImage();
-    const file = new File([blob], "katsuyama-hakkutsu.png", { type: "image/png" });
-    const shareData = {
-      files: [file],
-      text: `勝山のまちを発掘してきた！\n${TITLE} #IRIFUNE #福井県勝山市`
-    };
+    const file = new File([blob], "katsuyama-hakkutsu.jpg", { type: "image/jpeg" });
+    const shareData = { files: [file], text: `勝山のまちを発掘してきた！\n${TITLE} #IRIFUNE #福井県勝山市` };
     if (navigator.canShare && navigator.canShare(shareData)) {
       await navigator.share(shareData);
     } else {
       const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.download = "katsuyama-hakkutsu.png";
-      link.href = url;
-      link.click();
+      const a = document.createElement("a");
+      a.download = "katsuyama-hakkutsu.jpg";
+      a.href = url;
+      a.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     }
   } catch (err) {
-    if (err && err.name !== "AbortError") {
-      alert("画像の保存に失敗しました。もう一度お試しください。");
-    }
+    if (err && err.name !== "AbortError") alert("画像の保存に失敗しました。もう一度お試しください。");
   } finally {
     btn.disabled = false;
     btn.textContent = original;
@@ -642,6 +809,19 @@ document.getElementById("resetBtn").addEventListener("click", () => {
 
 initCells();
 render();
+
+// ロゴとフォントが揃った時点でスタンプを作り直す
+loadImage(LOGO_SRC).then(img => {
+  logoMask  = tintLogo(img, 0xC0, 0x45, 0x3C);
+  logoBrown = tintLogo(img, 0x46, 0x28, 0x14);
+  stampCache.clear();
+  updateStatus();
+}).catch(() => { /* ロゴが無くてもスタンプとフッターは成立する */ });
+
+document.fonts.ready.then(() => {
+  stampCache.clear();
+  updateStatus();
+});
 </script>
 
 </body>
