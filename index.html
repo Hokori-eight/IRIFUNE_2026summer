@@ -3,24 +3,66 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>フォトビンゴ</title>
+<title>IRIFUNE フォトビンゴ</title>
+<meta name="theme-color" content="#462914">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
+  :root {
+    --theme: #462914;
+    --theme-deep: #2C1809;
+    --theme-mid: #5E3A1C;
+    --theme-light: #7A5230;
+    --accent: #C89B6A;
+    --cream: #F5E9DA;
+  }
   * { box-sizing: border-box; }
   body {
     margin: 0;
-    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
-    background: #1b1f2a;
-    color: #fff;
+    font-family: "Noto Sans JP", -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--theme-deep);
+    color: var(--cream);
     min-height: 100vh;
     display: flex;
     flex-direction: column;
     align-items: center;
     padding: 16px;
   }
-  h1 {
-    font-size: 20px;
-    margin: 8px 0 16px;
+  header {
     text-align: center;
+    margin: 4px 0 14px;
+  }
+  h1 {
+    font-size: 21px;
+    font-weight: 700;
+    margin: 0;
+    letter-spacing: 0.04em;
+  }
+  .sub {
+    font-size: 11px;
+    color: var(--accent);
+    margin-top: 4px;
+    letter-spacing: 0.1em;
+  }
+  .status {
+    max-width: 420px;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 10px;
+    font-size: 13px;
+    font-weight: 500;
+  }
+  .status .bingo {
+    background: var(--accent);
+    color: var(--theme-deep);
+    font-weight: 700;
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-size: 12px;
   }
   .board {
     width: 100%;
@@ -29,15 +71,15 @@
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     grid-template-rows: repeat(3, 1fr);
-    gap: 6px;
-    background: #0e1016;
-    padding: 6px;
-    border-radius: 12px;
+    gap: 7px;
+    background: var(--theme);
+    padding: 7px;
+    border-radius: 14px;
   }
   .cell {
     position: relative;
-    background: #2a2f3d;
-    border-radius: 8px;
+    background: var(--theme-mid);
+    border-radius: 9px;
     overflow: hidden;
     display: flex;
     align-items: center;
@@ -45,7 +87,9 @@
     text-align: center;
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
+    transition: transform 0.1s;
   }
+  .cell:active { transform: scale(0.97); }
   .cell img {
     position: absolute;
     inset: 0;
@@ -56,9 +100,10 @@
   .cell .topic-text {
     position: relative;
     z-index: 1;
-    font-size: 13px;
-    line-height: 1.4;
-    padding: 8px;
+    font-size: 12.5px;
+    font-weight: 500;
+    line-height: 1.45;
+    padding: 8px 6px;
     word-break: break-word;
   }
   .cell.has-photo .topic-text {
@@ -67,99 +112,138 @@
     right: 0;
     bottom: 0;
     z-index: 2;
-    background: rgba(0,0,0,0.55);
+    background: linear-gradient(transparent, rgba(44,24,9,0.92));
     font-size: 10px;
-    padding: 4px 6px;
-    text-align: center;
+    padding: 12px 4px 5px;
   }
   .cell.center {
-    background: #3a2f4d;
+    background: var(--theme-light);
+    box-shadow: inset 0 0 0 2px var(--accent);
+  }
+  .cell .badge {
+    position: absolute;
+    top: 5px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 3;
+    background: var(--accent);
+    color: var(--theme-deep);
+    font-size: 9px;
+    font-weight: 700;
+    padding: 1px 7px;
+    border-radius: 999px;
+    white-space: nowrap;
   }
   .cell input.topic-input {
     position: relative;
     z-index: 2;
-    width: 90%;
-    background: rgba(255,255,255,0.9);
-    color: #222;
+    width: 86%;
+    margin-top: 14px;
+    background: rgba(245,233,218,0.95);
+    color: var(--theme-deep);
     border: none;
     border-radius: 6px;
     padding: 6px 4px;
-    font-size: 12px;
+    font-size: 11.5px;
+    font-family: inherit;
     text-align: center;
   }
-  .cell.center.has-photo input.topic-input {
-    display: none;
-  }
-  .file-input {
-    display: none;
-  }
+  .cell.center.has-photo input.topic-input { display: none; }
+  .file-input { display: none; }
   .controls {
     display: flex;
     gap: 10px;
-    margin-top: 20px;
+    margin-top: 18px;
     width: 100%;
     max-width: 420px;
   }
   button {
-    flex: 1;
-    padding: 12px 8px;
+    padding: 13px 8px;
     font-size: 15px;
+    font-family: inherit;
+    font-weight: 700;
     border: none;
-    border-radius: 8px;
-    font-weight: bold;
+    border-radius: 9px;
     cursor: pointer;
   }
   #resetBtn {
-    background: #444a5a;
-    color: #fff;
+    flex: 0 0 34%;
+    background: transparent;
+    color: var(--accent);
+    box-shadow: inset 0 0 0 1.5px var(--theme-light);
   }
-  #downloadBtn {
-    background: #4caf7d;
-    color: #06210f;
+  #saveBtn {
+    flex: 1;
+    background: var(--accent);
+    color: var(--theme-deep);
   }
+  #saveBtn:disabled { opacity: 0.5; }
   .hint {
-    margin-top: 12px;
-    font-size: 12px;
-    color: #9aa0ad;
+    margin-top: 14px;
+    font-size: 11.5px;
+    line-height: 1.7;
+    color: var(--theme-light);
     text-align: center;
     max-width: 420px;
   }
+  .hint strong { color: var(--accent); font-weight: 500; }
 </style>
 </head>
 <body>
 
-<h1>📸 フォトビンゴ</h1>
+<header>
+  <h1>IRIFUNE フォトビンゴ</h1>
+  <div class="sub">2026 SUMMER</div>
+</header>
+
+<div class="status">
+  <span id="count">0 / 9 発掘</span>
+  <span class="bingo" id="bingoBadge" style="display:none">BINGO!</span>
+</div>
 
 <div class="board" id="board"></div>
 
 <div class="controls">
   <button id="resetBtn">リセット</button>
-  <button id="downloadBtn">ダウンロード</button>
+  <button id="saveBtn">画像を保存</button>
 </div>
 
-<p class="hint">各マスをタップして写真を撮ってね。中央マスは自分でお題を決められます。</p>
+<p class="hint">
+  マスをタップして写真を撮ろう。中央は自由に決められる<strong>発掘マス</strong>。<br>
+  <strong>ページを閉じると消えます。</strong>完成したら必ず保存してね。
+</p>
 
 <script>
-const TOPIC_POOL = [
-  "青いもの",
-  "笑顔",
-  "空",
-  "食べ物",
-  "文字が書いてあるもの",
-  "動物",
-  "自分の靴",
-  "誰かの手",
-  "植物",
-  "丸いもの",
-  "赤いもの",
-  "乗り物",
-  "反射しているもの",
-  "影",
-  "看板",
-  "水"
+const TOPICS = [
+  "大清水",
+  "ダイナ荘",
+  "恐竜マンホール",
+  "消火栓モグラ",
+  "恐竜ポスト",
+  "七里壁",
+  "入船電柱",
+  "梅から生える松の木"
 ];
 
 const CENTER_INDEX = 4;
+const CENTER_LABEL = "発掘マス";
+const HASHTAG = "#入船フォトビンゴ";
+
+const C = {
+  theme: "#462914",
+  deep: "#2C1809",
+  mid: "#5E3A1C",
+  light: "#7A5230",
+  accent: "#C89B6A",
+  cream: "#F5E9DA"
+};
+
+const LINES = [
+  [0,1,2],[3,4,5],[6,7,8],
+  [0,3,6],[1,4,7],[2,5,8],
+  [0,4,8],[2,4,6]
+];
+
 let cells = [];
 
 function shuffle(arr) {
@@ -172,22 +256,44 @@ function shuffle(arr) {
 }
 
 function initCells() {
-  const chosen = shuffle(TOPIC_POOL).slice(0, 8);
+  const shuffled = shuffle(TOPICS);
   cells = [];
   let idx = 0;
   for (let i = 0; i < 9; i++) {
     if (i === CENTER_INDEX) {
       cells.push({ topic: "", photo: null, isCenter: true });
     } else {
-      cells.push({ topic: chosen[idx++], photo: null, isCenter: false });
+      cells.push({ topic: shuffled[idx++], photo: null, isCenter: false });
     }
   }
+}
+
+function filledCount() {
+  return cells.filter(c => c.photo).length;
+}
+
+function bingoLines() {
+  return LINES.filter(line => line.every(i => cells[i].photo));
+}
+
+function updateStatus() {
+  const n = filledCount();
+  document.getElementById("count").textContent = `${n} / 9 発掘`;
+  const lines = bingoLines().length;
+  const badge = document.getElementById("bingoBadge");
+  if (lines > 0) {
+    badge.style.display = "";
+    badge.textContent = n === 9 ? "コンプリート!" : (lines > 1 ? `${lines}ライン BINGO!` : "BINGO!");
+  } else {
+    badge.style.display = "none";
+  }
+  document.getElementById("saveBtn").disabled = false;
 }
 
 function render() {
   const board = document.getElementById("board");
   board.innerHTML = "";
-  cells.forEach((cell, i) => {
+  cells.forEach((cell) => {
     const div = document.createElement("div");
     div.className = "cell" + (cell.isCenter ? " center" : "") + (cell.photo ? " has-photo" : "");
 
@@ -197,21 +303,26 @@ function render() {
       div.appendChild(img);
     }
 
+    if (cell.isCenter) {
+      const badge = document.createElement("div");
+      badge.className = "badge";
+      badge.textContent = CENTER_LABEL;
+      div.appendChild(badge);
+    }
+
     if (cell.isCenter && !cell.photo) {
       const input = document.createElement("input");
       input.className = "topic-input";
       input.type = "text";
-      input.placeholder = "お題を入力";
+      input.placeholder = "発掘したもの";
       input.value = cell.topic;
       input.addEventListener("click", (e) => e.stopPropagation());
-      input.addEventListener("input", (e) => {
-        cell.topic = e.target.value;
-      });
+      input.addEventListener("input", (e) => { cell.topic = e.target.value; });
       div.appendChild(input);
     } else {
       const label = document.createElement("div");
       label.className = "topic-text";
-      label.textContent = cell.topic;
+      label.textContent = cell.topic || (cell.isCenter ? "" : "");
       div.appendChild(label);
     }
 
@@ -232,135 +343,205 @@ function render() {
     });
     div.appendChild(fileInput);
 
-    div.addEventListener("click", () => {
-      fileInput.click();
-    });
-
+    div.addEventListener("click", () => fileInput.click());
     board.appendChild(div);
   });
+  updateStatus();
 }
+
+/* ---------- 保存用画像の生成 ---------- */
+
+function loadImage(src) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+
+function roundRectPath(ctx, x, y, w, h, r) {
+  if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); return; }
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+function wrapLines(ctx, text, maxWidth) {
+  const lines = [];
+  let line = "";
+  for (const ch of text.split("")) {
+    const test = line + ch;
+    if (ctx.measureText(test).width > maxWidth && line) {
+      lines.push(line);
+      line = ch;
+    } else {
+      line = test;
+    }
+  }
+  if (line) lines.push(line);
+  return lines;
+}
+
+function drawCenteredText(ctx, text, cx, cy, maxWidth, lineHeight) {
+  if (!text) return;
+  const lines = wrapLines(ctx, text, maxWidth);
+  const startY = cy - (lines.length * lineHeight) / 2 + lineHeight / 2;
+  lines.forEach((l, i) => ctx.fillText(l, cx, startY + i * lineHeight));
+}
+
+function drawPhotoCover(ctx, img, x, y, w, h) {
+  const imgRatio = img.width / img.height;
+  const boxRatio = w / h;
+  let sx, sy, sw, sh;
+  if (imgRatio > boxRatio) {
+    sh = img.height; sw = sh * boxRatio; sx = (img.width - sw) / 2; sy = 0;
+  } else {
+    sw = img.width; sh = sw / boxRatio; sx = 0; sy = (img.height - sh) / 2;
+  }
+  ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
+}
+
+async function buildImage() {
+  await document.fonts.load('700 52px "Noto Sans JP"');
+  await document.fonts.load('500 26px "Noto Sans JP"');
+  await document.fonts.ready;
+
+  const W = 1080;
+  const PAD = 40;
+  const GAP = 14;
+  const HEADER = 170;
+  const FOOTER = 132;
+  const grid = W - PAD * 2;
+  const box = (grid - GAP * 2) / 3;
+  const H = HEADER + grid + FOOTER;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext("2d");
+
+  ctx.fillStyle = C.deep;
+  ctx.fillRect(0, 0, W, H);
+
+  // ヘッダー
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillStyle = C.cream;
+  ctx.font = '700 52px "Noto Sans JP", sans-serif';
+  ctx.fillText("IRIFUNE フォトビンゴ", W / 2, 68);
+
+  const lines = bingoLines().length;
+  const n = filledCount();
+  ctx.font = '500 26px "Noto Sans JP", sans-serif';
+  ctx.fillStyle = C.accent;
+  let statusText = `${n} / 9 発掘`;
+  if (n === 9) statusText += "  ・  コンプリート!";
+  else if (lines > 0) statusText += `  ・  ${lines}ライン BINGO!`;
+  ctx.fillText(statusText, W / 2, 124);
+
+  // 盤面の下地
+  ctx.fillStyle = C.theme;
+  roundRectPath(ctx, PAD - 10, HEADER - 10, grid + 20, grid + 20, 22);
+  ctx.fill();
+
+  const imgs = await Promise.all(cells.map(c => c.photo ? loadImage(c.photo) : null));
+
+  cells.forEach((cell, i) => {
+    const x = PAD + (i % 3) * (box + GAP);
+    const y = HEADER + Math.floor(i / 3) * (box + GAP);
+    const img = imgs[i];
+
+    ctx.save();
+    roundRectPath(ctx, x, y, box, box, 14);
+    ctx.clip();
+
+    if (img) {
+      drawPhotoCover(ctx, img, x, y, box, box);
+      // 下部のグラデーション帯 + お題
+      const bandH = 62;
+      const grad = ctx.createLinearGradient(0, y + box - bandH, 0, y + box);
+      grad.addColorStop(0, "rgba(44,24,9,0)");
+      grad.addColorStop(1, "rgba(44,24,9,0.93)");
+      ctx.fillStyle = grad;
+      ctx.fillRect(x, y + box - bandH, box, bandH);
+      ctx.fillStyle = C.cream;
+      ctx.font = '500 21px "Noto Sans JP", sans-serif';
+      drawCenteredText(ctx, cell.topic || CENTER_LABEL, x + box / 2, y + box - 26, box - 20, 24);
+    } else {
+      ctx.fillStyle = cell.isCenter ? C.light : C.mid;
+      ctx.fillRect(x, y, box, box);
+      ctx.fillStyle = C.cream;
+      ctx.font = '500 26px "Noto Sans JP", sans-serif';
+      drawCenteredText(ctx, cell.topic || (cell.isCenter ? CENTER_LABEL : ""), x + box / 2, y + box / 2, box - 34, 34);
+    }
+    ctx.restore();
+
+    if (cell.isCenter) {
+      ctx.strokeStyle = C.accent;
+      ctx.lineWidth = 4;
+      roundRectPath(ctx, x + 2, y + 2, box - 4, box - 4, 13);
+      ctx.stroke();
+    }
+  });
+
+  // フッター
+  const d = new Date();
+  const dateStr = `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
+  ctx.textAlign = "center";
+  ctx.fillStyle = C.accent;
+  ctx.font = '700 30px "Noto Sans JP", sans-serif';
+  ctx.fillText(HASHTAG, W / 2, HEADER + grid + 52);
+  ctx.fillStyle = C.light;
+  ctx.font = '500 24px "Noto Sans JP", sans-serif';
+  ctx.fillText(dateStr, W / 2, HEADER + grid + 94);
+
+  return new Promise(resolve => canvas.toBlob(resolve, "image/png"));
+}
+
+/* ---------- 保存 / 共有 ---------- */
+
+document.getElementById("saveBtn").addEventListener("click", async (e) => {
+  const btn = e.currentTarget;
+  const original = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "作成中...";
+  try {
+    const blob = await buildImage();
+    const file = new File([blob], "irifune-photo-bingo.png", { type: "image/png" });
+    const shareData = {
+      files: [file],
+      text: `IRIFUNE フォトビンゴで街を発掘してきた！\n${HASHTAG}`
+    };
+    if (navigator.canShare && navigator.canShare(shareData)) {
+      await navigator.share(shareData);
+    } else {
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.download = "irifune-photo-bingo.png";
+      link.href = url;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+  } catch (err) {
+    if (err && err.name !== "AbortError") {
+      alert("画像の保存に失敗しました。もう一度お試しください。");
+    }
+  } finally {
+    btn.disabled = false;
+    btn.textContent = original;
+  }
+});
 
 document.getElementById("resetBtn").addEventListener("click", () => {
   if (confirm("お題をシャッフルして写真をすべて消去します。よろしいですか？")) {
     initCells();
     render();
   }
-});
-
-document.getElementById("downloadBtn").addEventListener("click", () => {
-  const size = 900;
-  const canvas = document.createElement("canvas");
-  canvas.width = size;
-  canvas.height = size;
-  const ctx = canvas.getContext("2d");
-
-  ctx.fillStyle = "#0e1016";
-  ctx.fillRect(0, 0, size, size);
-
-  const gap = 6;
-  const pad = 6;
-
-  let pending = cells.filter(c => c.photo).length;
-  const done = () => {
-    const link = document.createElement("a");
-    link.download = "photo-bingo.png";
-    link.href = canvas.toDataURL("image/png");
-    link.click();
-  };
-
-  const innerSize = size - pad * 2 - gap * 2;
-  const box = innerSize / 3;
-
-  const cellRect = (i) => {
-    const row = Math.floor(i / 3);
-    const col = i % 3;
-    const x = pad + col * (box + gap);
-    const y = pad + row * (box + gap);
-    return { x, y, w: box, h: box };
-  };
-
-  function drawTopicOnly(cell, rect) {
-    ctx.fillStyle = cell.isCenter ? "#3a2f4d" : "#2a2f3d";
-    ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
-    ctx.fillStyle = "#ffffff";
-    ctx.font = "bold 22px sans-serif";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    wrapText(cell.topic || (cell.isCenter ? "(自由枠)" : ""), rect.x + rect.w / 2, rect.y + rect.h / 2, rect.w - 24, 26);
-  }
-
-  function drawLabel(cell, rect) {
-    const labelH = 40;
-    ctx.fillStyle = "rgba(0,0,0,0.55)";
-    ctx.fillRect(rect.x, rect.y + rect.h - labelH, rect.w, labelH);
-    ctx.fillStyle = "#ffffff";
-    ctx.font = "13px sans-serif";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    wrapText(cell.topic, rect.x + rect.w / 2, rect.y + rect.h - labelH / 2, rect.w - 12, 15);
-  }
-
-  function wrapText(text, cx, cy, maxWidth, lineHeight) {
-    if (!text) return;
-    const chars = text.split("");
-    let lines = [];
-    let line = "";
-    for (const ch of chars) {
-      const test = line + ch;
-      if (ctx.measureText(test).width > maxWidth && line) {
-        lines.push(line);
-        line = ch;
-      } else {
-        line = test;
-      }
-    }
-    if (line) lines.push(line);
-    const totalH = lines.length * lineHeight;
-    let startY = cy - totalH / 2 + lineHeight / 2;
-    lines.forEach((l, idx) => {
-      ctx.fillText(l, cx, startY + idx * lineHeight);
-    });
-  }
-
-  function drawPhotoCover(img, rect) {
-    const imgRatio = img.width / img.height;
-    const rectRatio = rect.w / rect.h;
-    let sx, sy, sw, sh;
-    if (imgRatio > rectRatio) {
-      sh = img.height;
-      sw = sh * rectRatio;
-      sx = (img.width - sw) / 2;
-      sy = 0;
-    } else {
-      sw = img.width;
-      sh = sw / rectRatio;
-      sx = 0;
-      sy = (img.height - sh) / 2;
-    }
-    ctx.drawImage(img, sx, sy, sw, sh, rect.x, rect.y, rect.w, rect.h);
-  }
-
-  if (pending === 0) {
-    cells.forEach((cell, i) => drawTopicOnly(cell, cellRect(i)));
-    done();
-    return;
-  }
-
-  cells.forEach((cell, i) => {
-    const rect = cellRect(i);
-    if (!cell.photo) {
-      drawTopicOnly(cell, rect);
-      return;
-    }
-    const img = new Image();
-    img.onload = () => {
-      drawPhotoCover(img, rect);
-      drawLabel(cell, rect);
-      pending--;
-      if (pending === 0) done();
-    };
-    img.src = cell.photo;
-  });
 });
 
 initCells();
