@@ -102,7 +102,8 @@
     font-weight: 500;
     line-height: 1.45;
     padding: 8px 6px;
-    word-break: break-word;
+    white-space: pre-line;  /* お題の \n を改行として反映 */
+    overflow-wrap: anywhere;
   }
   .cell.has-photo .topic-text {
     position: absolute;
@@ -210,15 +211,16 @@
 </p>
 
 <script>
+/* 改行したい位置に \n を入れると、その位置で必ず折り返します */
 const TOPICS = [
   "大清水",
   "ダイナ荘",
-  "恐竜マンホール",
+  "恐竜\nマンホール",
   "消火栓モグラ",
   "恐竜ポスト",
   "七里壁",
   "入船電柱",
-  "梅から生える松の木"
+  "梅から生える\n松の木"
 ];
 
 const CENTER_INDEX = 4;
@@ -368,19 +370,22 @@ function roundRectPath(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
+/* \n で必ず改行し、それでも幅に収まらない行だけ文字単位で折り返す */
 function wrapLines(ctx, text, maxWidth) {
   const lines = [];
-  let line = "";
-  for (const ch of text.split("")) {
-    const test = line + ch;
-    if (ctx.measureText(test).width > maxWidth && line) {
-      lines.push(line);
-      line = ch;
-    } else {
-      line = test;
+  for (const segment of text.split("\n")) {
+    let line = "";
+    for (const ch of segment.split("")) {
+      const test = line + ch;
+      if (ctx.measureText(test).width > maxWidth && line) {
+        lines.push(line);
+        line = ch;
+      } else {
+        line = test;
+      }
     }
+    lines.push(line);
   }
-  if (line) lines.push(line);
   return lines;
 }
 
