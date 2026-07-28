@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>フォトビンゴ</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+    background: #1b1f2a;
+    color: #fff;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 16px;
+  }
+  h1 {
+    font-size: 20px;
+    margin: 8px 0 16px;
+    text-align: center;
+  }
+  .board {
+    width: 100%;
+    max-width: 420px;
+    aspect-ratio: 1 / 1;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    gap: 6px;
+    background: #0e1016;
+    padding: 6px;
+    border-radius: 12px;
+  }
+  .cell {
+    position: relative;
+    background: #2a2f3d;
+    border-radius: 8px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .cell img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .cell .topic-text {
+    position: relative;
+    z-index: 1;
+    font-size: 13px;
+    line-height: 1.4;
+    padding: 8px;
+    word-break: break-word;
+  }
+  .cell.has-photo .topic-text {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 2;
+    background: rgba(0,0,0,0.55);
+    font-size: 10px;
+    padding: 4px 6px;
+    text-align: center;
+  }
+  .cell.center {
+    background: #3a2f4d;
+  }
+  .cell input.topic-input {
+    position: relative;
+    z-index: 2;
+    width: 90%;
+    background: rgba(255,255,255,0.9);
+    color: #222;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 4px;
+    font-size: 12px;
+    text-align: center;
+  }
+  .cell.center.has-photo input.topic-input {
+    display: none;
+  }
+  .file-input {
+    display: none;
+  }
+  .controls {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+    width: 100%;
+    max-width: 420px;
+  }
+  button {
+    flex: 1;
+    padding: 12px 8px;
+    font-size: 15px;
+    border: none;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  #resetBtn {
+    background: #444a5a;
+    color: #fff;
+  }
+  #downloadBtn {
+    background: #4caf7d;
+    color: #06210f;
+  }
+  .hint {
+    margin-top: 12px;
+    font-size: 12px;
+    color: #9aa0ad;
+    text-align: center;
+    max-width: 420px;
+  }
+</style>
+</head>
+<body>
+
+<h1>📸 フォトビンゴ</h1>
+
+<div class="board" id="board"></div>
+
+<div class="controls">
+  <button id="resetBtn">リセット</button>
+  <button id="downloadBtn">ダウンロード</button>
+</div>
+
+<p class="hint">各マスをタップして写真を撮ってね。中央マスは自分でお題を決められます。</p>
+
+<script>
+const TOPIC_POOL = [
+  "青いもの",
+  "笑顔",
+  "空",
+  "食べ物",
+  "文字が書いてあるもの",
+  "動物",
+  "自分の靴",
+  "誰かの手",
+  "植物",
+  "丸いもの",
+  "赤いもの",
+  "乗り物",
+  "反射しているもの",
+  "影",
+  "看板",
+  "水"
+];
+
+const CENTER_INDEX = 4;
+let cells = [];
+
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function initCells() {
+  const chosen = shuffle(TOPIC_POOL).slice(0, 8);
+  cells = [];
+  let idx = 0;
+  for (let i = 0; i < 9; i++) {
+    if (i === CENTER_INDEX) {
+      cells.push({ topic: "", photo: null, isCenter: true });
+    } else {
+      cells.push({ topic: chosen[idx++], photo: null, isCenter: false });
+    }
+  }
+}
+
+function render() {
+  const board = document.getElementById("board");
+  board.innerHTML = "";
+  cells.forEach((cell, i) => {
+    const div = document.createElement("div");
+    div.className = "cell" + (cell.isCenter ? " center" : "") + (cell.photo ? " has-photo" : "");
+
+    if (cell.photo) {
+      const img = document.createElement("img");
+      img.src = cell.photo;
+      div.appendChild(img);
+    }
+
+    if (cell.isCenter && !cell.photo) {
+      const input = document.createElement("input");
+      input.className = "topic-input";
+      input.type = "text";
+      input.placeholder = "お題を入力";
+      input.value = cell.topic;
+      input.addEventListener("click", (e) => e.stopPropagation());
+      input.addEventListener("input", (e) => {
+        cell.topic = e.target.value;
+      });
+      div.appendChild(input);
+    } else {
+      const label = document.createElement("div");
+      label.className = "topic-text";
+      label.textContent = cell.topic;
+      div.appendChild(label);
+    }
+
+    const fileInput = document.createElement("input");
+    fileInput.type = "file";
+    fileInput.accept = "image/*";
+    fileInput.capture = "environment";
+    fileInput.className = "file-input";
+    fileInput.addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        cell.photo = ev.target.result;
+        render();
+      };
+      reader.readAsDataURL(file);
+    });
+    div.appendChild(fileInput);
+
+    div.addEventListener("click", () => {
+      fileInput.click();
+    });
+
+    board.appendChild(div);
+  });
+}
+
+document.getElementById("resetBtn").addEventListener("click", () => {
+  if (confirm("お題をシャッフルして写真をすべて消去します。よろしいですか？")) {
+    initCells();
+    render();
+  }
+});
+
+document.getElementById("downloadBtn").addEventListener("click", () => {
+  const size = 900;
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d");
+
+  ctx.fillStyle = "#0e1016";
+  ctx.fillRect(0, 0, size, size);
+
+  const gap = 6;
+  const pad = 6;
+
+  let pending = cells.filter(c => c.photo).length;
+  const done = () => {
+    const link = document.createElement("a");
+    link.download = "photo-bingo.png";
+    link.href = canvas.toDataURL("image/png");
+    link.click();
+  };
+
+  const innerSize = size - pad * 2 - gap * 2;
+  const box = innerSize / 3;
+
+  const cellRect = (i) => {
+    const row = Math.floor(i / 3);
+    const col = i % 3;
+    const x = pad + col * (box + gap);
+    const y = pad + row * (box + gap);
+    return { x, y, w: box, h: box };
+  };
+
+  function drawTopicOnly(cell, rect) {
+    ctx.fillStyle = cell.isCenter ? "#3a2f4d" : "#2a2f3d";
+    ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 22px sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    wrapText(cell.topic || (cell.isCenter ? "(自由枠)" : ""), rect.x + rect.w / 2, rect.y + rect.h / 2, rect.w - 24, 26);
+  }
+
+  function drawLabel(cell, rect) {
+    const labelH = 40;
+    ctx.fillStyle = "rgba(0,0,0,0.55)";
+    ctx.fillRect(rect.x, rect.y + rect.h - labelH, rect.w, labelH);
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "13px sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    wrapText(cell.topic, rect.x + rect.w / 2, rect.y + rect.h - labelH / 2, rect.w - 12, 15);
+  }
+
+  function wrapText(text, cx, cy, maxWidth, lineHeight) {
+    if (!text) return;
+    const chars = text.split("");
+    let lines = [];
+    let line = "";
+    for (const ch of chars) {
+      const test = line + ch;
+      if (ctx.measureText(test).width > maxWidth && line) {
+        lines.push(line);
+        line = ch;
+      } else {
+        line = test;
+      }
+    }
+    if (line) lines.push(line);
+    const totalH = lines.length * lineHeight;
+    let startY = cy - totalH / 2 + lineHeight / 2;
+    lines.forEach((l, idx) => {
+      ctx.fillText(l, cx, startY + idx * lineHeight);
+    });
+  }
+
+  function drawPhotoCover(img, rect) {
+    const imgRatio = img.width / img.height;
+    const rectRatio = rect.w / rect.h;
+    let sx, sy, sw, sh;
+    if (imgRatio > rectRatio) {
+      sh = img.height;
+      sw = sh * rectRatio;
+      sx = (img.width - sw) / 2;
+      sy = 0;
+    } else {
+      sw = img.width;
+      sh = sw / rectRatio;
+      sx = 0;
+      sy = (img.height - sh) / 2;
+    }
+    ctx.drawImage(img, sx, sy, sw, sh, rect.x, rect.y, rect.w, rect.h);
+  }
+
+  if (pending === 0) {
+    cells.forEach((cell, i) => drawTopicOnly(cell, cellRect(i)));
+    done();
+    return;
+  }
+
+  cells.forEach((cell, i) => {
+    const rect = cellRect(i);
+    if (!cell.photo) {
+      drawTopicOnly(cell, rect);
+      return;
+    }
+    const img = new Image();
+    img.onload = () => {
+      drawPhotoCover(img, rect);
+      drawLabel(cell, rect);
+      pending--;
+      if (pending === 0) done();
+    };
+    img.src = cell.photo;
+  });
+});
+
+initCells();
+render();
+</script>
+
+</body>
+</html>
