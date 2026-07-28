@@ -29,34 +29,39 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 18px 16px 32px;
+    padding: 12px 16px;
   }
-  header { text-align: center; margin: 2px 0 16px; }
-  h1 { font-size: 22px; font-weight: 700; margin: 0; letter-spacing: 0.02em; }
+  header { text-align: center; margin: 0 0 10px; }
+  h1 { font-size: 20px; font-weight: 700; margin: 0; letter-spacing: 0.02em; }
   .site-footer {
-    margin-top: 26px;
-    padding-top: 20px;
+    margin-top: 12px;
+    padding-top: 10px;
     border-top: 1px solid rgba(70,40,20,0.14);
     width: 100%;
     max-width: 420px;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
-    font-size: 11.5px;
-    letter-spacing: 0.14em;
+    gap: 7px;
+    font-size: 11px;
+    letter-spacing: 0.12em;
     color: var(--gray);
   }
-  .footer-logo { width: 26px; height: 26px; object-fit: contain; mix-blend-mode: multiply; }
+  .footer-logo { width: 20px; height: 20px; object-fit: contain; mix-blend-mode: multiply; }
   .status {
     max-width: 420px;
     width: 100%;
     text-align: center;
-    margin-bottom: 12px;
+    margin-bottom: 8px;
     font-size: 13px;
     font-weight: 500;
   }
-  .board-wrap { position: relative; width: 100%; max-width: 420px; }
+  /* 画面が低いときは盤面を縮めて、スクロールなしで収める */
+  .board-wrap {
+    position: relative;
+    width: min(100%, 420px, calc(100vh - 268px));
+    width: min(100%, 420px, calc(100dvh - 268px));
+  }
   .board {
     width: 100%;
     aspect-ratio: 1 / 1;
@@ -150,7 +155,7 @@
   }
   .cell.center.has-photo input.topic-input { display: none; }
   .file-input { display: none; }
-  .controls { display: flex; gap: 10px; margin-top: 18px; width: 100%; max-width: 420px; }
+  .controls { display: flex; gap: 10px; margin-top: 12px; width: 100%; max-width: 420px; }
   button {
     padding: 13px 8px;
     font-size: 15px;
@@ -169,9 +174,9 @@
   #saveBtn { flex: 1; background: var(--sea); color: #fff; }
   #saveBtn:disabled { opacity: 0.5; }
   .hint {
-    margin-top: 16px;
-    font-size: 11.5px;
-    line-height: 1.8;
+    margin: 10px 0 0;
+    font-size: 11px;
+    line-height: 1.65;
     color: var(--gray);
     text-align: center;
     max-width: 420px;
@@ -227,19 +232,27 @@
 
 <div class="controls">
   <button id="resetBtn">リセット</button>
-  <button id="saveBtn">シートを保存</button>
+  <button id="saveBtn">画像を保存</button>
 </div>
 
 <p class="hint">
-  マスをタップして写真を撮ろう。中央は自由に決められる<strong>発掘マス</strong>。<br>
-  撮った写真は<strong>もう一度マスをタップ</strong>すると端末に保存できます。<br>
-  <strong>ページを閉じると消えます。</strong>
+  マスをタップして撮影。<strong>もう一度タップ</strong>で端末に保存できます。<br>
+  中央は自由に決められる<strong>発掘マス</strong>。<strong>ページを閉じると消えます。</strong>
 </p>
 
 <footer class="site-footer">
   <img src="logo.png" alt="" class="footer-logo">
   <span>まちの発掘拠点 IRIFUNE</span>
 </footer>
+
+<div class="sheet-back" id="saveBack" hidden>
+  <div class="sheet">
+    <div class="sheet-title">保存するものを選んでください</div>
+    <button class="primary" id="saveSheetBtn">ビンゴシートを保存</button>
+    <button class="plain"   id="saveAllBtn">撮った写真をまとめて保存</button>
+    <button class="quiet"   id="saveCancelBtn">キャンセル</button>
+  </div>
+</div>
 
 <div class="sheet-back" id="sheetBack" hidden>
   <div class="sheet">
@@ -373,6 +386,41 @@ function tintLogo(img, r, g, b) {
   return cv;
 }
 
+/* 丸枠のインクを部分的に削って、押しムラのある枠にする（文字とロゴには触れない） */
+function erodeRing(rx, S, cx, cy, r) {
+  const rnd = mulberry32(20260728);
+  rx.globalCompositeOperation = "destination-out";
+
+  // 枠線の上に乗るような半径を選ぶ
+  const onRing = () => (rnd() < 0.65 ? r : r * 0.885) * (0.97 + rnd() * 0.06);
+
+  // インクの欠け
+  for (let i = 0; i < 30; i++) {
+    const a = rnd() * Math.PI * 2, d = onRing();
+    rx.beginPath();
+    rx.arc(cx + Math.cos(a) * d, cy + Math.sin(a) * d, S * (0.005 + rnd() * 0.022), 0, Math.PI * 2);
+    rx.fill();
+  }
+  // 細かい擦れ
+  for (let i = 0; i < 420; i++) {
+    const a = rnd() * Math.PI * 2, d = onRing();
+    rx.beginPath();
+    rx.arc(cx + Math.cos(a) * d, cy + Math.sin(a) * d, S * (0.0012 + rnd() * 0.0055), 0, Math.PI * 2);
+    rx.fill();
+  }
+  // 枠が途切れたように見える弧
+  rx.lineCap = "round";
+  for (let i = 0; i < 7; i++) {
+    const a = rnd() * Math.PI * 2;
+    const span = 0.05 + rnd() * 0.16;
+    rx.lineWidth = S * (0.006 + rnd() * 0.024);
+    rx.beginPath();
+    rx.arc(cx, cy, rnd() < 0.65 ? r : r * 0.885, a, a + span);
+    rx.stroke();
+  }
+  rx.globalCompositeOperation = "source-over";
+}
+
 const stampCache = new Map();
 
 function makeStampCanvas(subText) {
@@ -384,16 +432,22 @@ function makeStampCanvas(subText) {
   const x = cv.getContext("2d");
   const cx = S / 2, cy = S / 2, r = S * 0.40;
 
+  // 二重の外枠だけは別レイヤーに描き、掠れさせてから合成する
+  const ring = document.createElement("canvas");
+  ring.width = ring.height = S;
+  const rx = ring.getContext("2d");
+  rx.strokeStyle = C.stamp;
+  rx.lineWidth = S * 0.030;
+  rx.beginPath(); rx.arc(cx, cy, r, 0, Math.PI * 2); rx.stroke();
+  rx.lineWidth = S * 0.010;
+  rx.beginPath(); rx.arc(cx, cy, r * 0.885, 0, Math.PI * 2); rx.stroke();
+  erodeRing(rx, S, cx, cy, r);
+  x.drawImage(ring, 0, 0);
+
   x.strokeStyle = C.stamp;
   x.fillStyle = C.stamp;
   x.textAlign = "center";
   x.textBaseline = "middle";
-
-  // 二重の外枠
-  x.lineWidth = S * 0.030;
-  x.beginPath(); x.arc(cx, cy, r, 0, Math.PI * 2); x.stroke();
-  x.lineWidth = S * 0.010;
-  x.beginPath(); x.arc(cx, cy, r * 0.885, 0, Math.PI * 2); x.stroke();
 
   // IRIFUNE のシンボルマーク
   if (logoMask) {
@@ -413,42 +467,6 @@ function makeStampCanvas(subText) {
 
   x.font = `700 ${Math.round(S * 0.055)}px Inter, "Noto Sans JP", sans-serif`;
   x.fillText(subText, cx, cy + S * 0.205);
-
-  // ここから掠れ表現：描いたインクを部分的に削り取る。
-  // 実際のハンコは外周ほどインクが乗りにくいので、削りを外側に寄せて中心の文字は残す
-  const rnd = mulberry32(20260728);
-  x.globalCompositeOperation = "destination-out";
-
-  const outward = () => r * (0.45 + 0.62 * rnd());  // 外周寄りの半径
-  const anywhere = () => r * Math.sqrt(rnd()) * 1.05;
-
-  // 外周のインク欠け
-  for (let i = 0; i < 46; i++) {
-    const a = rnd() * Math.PI * 2, d = outward();
-    x.beginPath();
-    x.arc(cx + Math.cos(a) * d, cy + Math.sin(a) * d, S * (0.004 + rnd() * 0.020), 0, Math.PI * 2);
-    x.fill();
-  }
-  // 全体に散る細かい擦れ
-  for (let i = 0; i < 900; i++) {
-    const a = rnd() * Math.PI * 2, d = anywhere();
-    x.beginPath();
-    x.arc(cx + Math.cos(a) * d, cy + Math.sin(a) * d, S * (0.0010 + rnd() * 0.0032), 0, Math.PI * 2);
-    x.fill();
-  }
-  // 押しムラらしい細い筋（外周中心に、短く）
-  x.lineCap = "round";
-  for (let i = 0; i < 9; i++) {
-    const a = rnd() * Math.PI * 2, d = outward();
-    const px = cx + Math.cos(a) * d, py = cy + Math.sin(a) * d;
-    const len = S * (0.04 + rnd() * 0.10), ang = -0.35 + rnd() * 0.7;
-    x.lineWidth = S * (0.0015 + rnd() * 0.0045);
-    x.beginPath();
-    x.moveTo(px, py);
-    x.lineTo(px + Math.cos(ang) * len, py + Math.sin(ang) * len);
-    x.stroke();
-  }
-  x.globalCompositeOperation = "source-over";
 
   stampCache.set(subText, cv);
   return cv;
@@ -773,9 +791,61 @@ async function buildImage() {
   return new Promise(resolve => canvas.toBlob(resolve, "image/jpeg", 0.92));
 }
 
-document.getElementById("saveBtn").addEventListener("click", async (e) => {
+/* 保存メニュー */
+
+function photoLabel(cell) {
+  return (cell.topic || CENTER_LABEL).replace(/\n/g, "");
+}
+
+document.getElementById("saveBtn").addEventListener("click", () => {
+  const shot = cells.filter(c => c.file).length;
+  const allBtn = document.getElementById("saveAllBtn");
+  allBtn.textContent = `撮った写真をまとめて保存（${shot}枚）`;
+  allBtn.disabled = shot === 0;
+  allBtn.style.opacity = shot === 0 ? 0.4 : 1;
+  document.getElementById("saveBack").hidden = false;
+});
+
+function closeSaveMenu() { document.getElementById("saveBack").hidden = true; }
+document.getElementById("saveCancelBtn").addEventListener("click", closeSaveMenu);
+document.getElementById("saveBack").addEventListener("click", (e) => {
+  if (e.target.id === "saveBack") closeSaveMenu();
+});
+
+/* 撮影した元画像をまとめて共有シートへ渡す */
+document.getElementById("saveAllBtn").addEventListener("click", async (e) => {
   const btn = e.currentTarget;
+  const files = cells
+    .filter(c => c.file)
+    .map(c => new File([c.file], `katsuyama-${photoLabel(c)}.jpg`, { type: c.file.type || "image/jpeg" }));
+  if (!files.length) return;
+
+  closeSaveMenu();
+  try {
+    const data = { files };
+    if (navigator.canShare && navigator.canShare(data)) {
+      await navigator.share(data);
+      return;
+    }
+    // 共有APIが使えない環境では1枚ずつダウンロードする
+    for (const f of files) {
+      const url = URL.createObjectURL(f);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = f.name;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      await new Promise(r => setTimeout(r, 300));
+    }
+  } catch (err) {
+    if (err && err.name !== "AbortError") alert("保存できませんでした。もう一度お試しください。");
+  }
+});
+
+document.getElementById("saveSheetBtn").addEventListener("click", async () => {
+  const btn = document.getElementById("saveBtn");
   const original = btn.textContent;
+  closeSaveMenu();
   btn.disabled = true;
   btn.textContent = "作成中...";
   try {
