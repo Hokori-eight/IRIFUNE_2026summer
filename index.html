@@ -3,47 +3,45 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>IRIFUNE フォトビンゴ</title>
-<meta name="theme-color" content="#462914">
+<title>#勝山発掘まちあるき | IRIFUNE</title>
+<meta name="theme-color" content="#FFFDF3">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --theme: #462914;
-    --theme-deep: #2C1809;
-    --theme-mid: #5E3A1C;
-    --theme-light: #7A5230;
-    --accent: #C89B6A;
-    --cream: #F5E9DA;
+    /* IRIFUNE ブランドトークン */
+    --base:  #FFFDF3;  /* Template */
+    --brown: #462814;  /* Dark Brown */
+    --land:  #B0C8A4;  /* land */
+    --sky:   #73B4C0;  /* sky */
+    --sea:   #4F9282;
+    --gray:  #727171;
   }
   * { box-sizing: border-box; }
   body {
     margin: 0;
-    font-family: "Noto Sans JP", -apple-system, BlinkMacSystemFont, sans-serif;
-    background: var(--theme-deep);
-    color: var(--cream);
+    font-family: Inter, "Noto Sans JP", -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--base);
+    color: var(--brown);
     min-height: 100vh;
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 16px;
+    padding: 18px 16px 32px;
   }
-  header {
-    text-align: center;
-    margin: 4px 0 14px;
-  }
+  header { text-align: center; margin: 2px 0 16px; }
   h1 {
-    font-size: 21px;
+    font-size: 22px;
     font-weight: 700;
     margin: 0;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.02em;
   }
   .sub {
     font-size: 11px;
-    color: var(--accent);
-    margin-top: 4px;
-    letter-spacing: 0.1em;
+    color: var(--gray);
+    margin-top: 6px;
+    letter-spacing: 0.14em;
   }
   .status {
     max-width: 420px;
@@ -52,15 +50,15 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
-    margin-bottom: 10px;
+    margin-bottom: 12px;
     font-size: 13px;
     font-weight: 500;
   }
   .status .bingo {
-    background: var(--accent);
-    color: var(--theme-deep);
+    background: var(--sea);
+    color: #fff;
     font-weight: 700;
-    padding: 2px 10px;
+    padding: 3px 11px;
     border-radius: 999px;
     font-size: 12px;
   }
@@ -71,15 +69,15 @@
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     grid-template-rows: repeat(3, 1fr);
-    gap: 7px;
-    background: var(--theme);
-    padding: 7px;
+    gap: 6px;
+    background: var(--brown);
+    padding: 6px;
     border-radius: 14px;
   }
   .cell {
     position: relative;
-    background: var(--theme-mid);
-    border-radius: 9px;
+    background: var(--base);
+    border-radius: 8px;
     overflow: hidden;
     display: flex;
     align-items: center;
@@ -112,35 +110,33 @@
     right: 0;
     bottom: 0;
     z-index: 2;
-    background: linear-gradient(transparent, rgba(44,24,9,0.92));
+    color: var(--base);
+    background: linear-gradient(transparent, rgba(70,40,20,0.92));
     font-size: 10px;
-    padding: 12px 4px 5px;
+    padding: 14px 4px 5px;
   }
-  .cell.center {
-    background: var(--theme-light);
-    box-shadow: inset 0 0 0 2px var(--accent);
-  }
+  .cell.center { background: var(--land); }
   .cell .badge {
     position: absolute;
-    top: 5px;
+    top: 6px;
     left: 50%;
     transform: translateX(-50%);
     z-index: 3;
-    background: var(--accent);
-    color: var(--theme-deep);
+    background: var(--brown);
+    color: var(--base);
     font-size: 9px;
     font-weight: 700;
-    padding: 1px 7px;
+    padding: 2px 8px;
     border-radius: 999px;
     white-space: nowrap;
   }
   .cell input.topic-input {
     position: relative;
     z-index: 2;
-    width: 86%;
-    margin-top: 14px;
-    background: rgba(245,233,218,0.95);
-    color: var(--theme-deep);
+    width: 84%;
+    margin-top: 16px;
+    background: rgba(255,253,243,0.95);
+    color: var(--brown);
     border: none;
     border-radius: 6px;
     padding: 6px 4px;
@@ -169,31 +165,31 @@
   #resetBtn {
     flex: 0 0 34%;
     background: transparent;
-    color: var(--accent);
-    box-shadow: inset 0 0 0 1.5px var(--theme-light);
+    color: var(--brown);
+    box-shadow: inset 0 0 0 1.5px var(--brown);
   }
   #saveBtn {
     flex: 1;
-    background: var(--accent);
-    color: var(--theme-deep);
+    background: var(--sea);
+    color: #fff;
   }
   #saveBtn:disabled { opacity: 0.5; }
   .hint {
-    margin-top: 14px;
+    margin-top: 16px;
     font-size: 11.5px;
-    line-height: 1.7;
-    color: var(--theme-light);
+    line-height: 1.8;
+    color: var(--gray);
     text-align: center;
     max-width: 420px;
   }
-  .hint strong { color: var(--accent); font-weight: 500; }
+  .hint strong { color: var(--brown); font-weight: 700; }
 </style>
 </head>
 <body>
 
 <header>
-  <h1>IRIFUNE フォトビンゴ</h1>
-  <div class="sub">2026 SUMMER</div>
+  <h1>#勝山発掘まちあるき</h1>
+  <div class="sub">まちの発掘拠点 IRIFUNE</div>
 </header>
 
 <div class="status">
@@ -227,15 +223,17 @@ const TOPICS = [
 
 const CENTER_INDEX = 4;
 const CENTER_LABEL = "発掘マス";
-const HASHTAG = "#入船フォトビンゴ";
+const TITLE = "#勝山発掘まちあるき";
+const SUBTITLE = "まちの発掘拠点 IRIFUNE";
 
+/* IRIFUNE ブランドトークン（k-irifune.com と共通） */
 const C = {
-  theme: "#462914",
-  deep: "#2C1809",
-  mid: "#5E3A1C",
-  light: "#7A5230",
-  accent: "#C89B6A",
-  cream: "#F5E9DA"
+  base:  "#FFFDF3",
+  brown: "#462814",
+  land:  "#B0C8A4",
+  sky:   "#73B4C0",
+  sea:   "#4F9282",
+  gray:  "#727171"
 };
 
 const LINES = [
@@ -287,7 +285,6 @@ function updateStatus() {
   } else {
     badge.style.display = "none";
   }
-  document.getElementById("saveBtn").disabled = false;
 }
 
 function render() {
@@ -322,7 +319,7 @@ function render() {
     } else {
       const label = document.createElement("div");
       label.className = "topic-text";
-      label.textContent = cell.topic || (cell.isCenter ? "" : "");
+      label.textContent = cell.topic;
       div.appendChild(label);
     }
 
@@ -407,15 +404,15 @@ function drawPhotoCover(ctx, img, x, y, w, h) {
 }
 
 async function buildImage() {
-  await document.fonts.load('700 52px "Noto Sans JP"');
+  await document.fonts.load('700 54px "Noto Sans JP"');
   await document.fonts.load('500 26px "Noto Sans JP"');
   await document.fonts.ready;
 
   const W = 1080;
-  const PAD = 40;
-  const GAP = 14;
-  const HEADER = 170;
-  const FOOTER = 132;
+  const PAD = 44;
+  const GAP = 12;
+  const HEADER = 186;
+  const FOOTER = 128;
   const grid = W - PAD * 2;
   const box = (grid - GAP * 2) / 3;
   const H = HEADER + grid + FOOTER;
@@ -425,28 +422,40 @@ async function buildImage() {
   canvas.height = H;
   const ctx = canvas.getContext("2d");
 
-  ctx.fillStyle = C.deep;
+  ctx.fillStyle = C.base;
   ctx.fillRect(0, 0, W, H);
 
-  // ヘッダー
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillStyle = C.cream;
-  ctx.font = '700 52px "Noto Sans JP", sans-serif';
-  ctx.fillText("IRIFUNE フォトビンゴ", W / 2, 68);
 
-  const lines = bingoLines().length;
+  // ヘッダー
+  ctx.fillStyle = C.brown;
+  ctx.font = '700 54px Inter, "Noto Sans JP", sans-serif';
+  ctx.fillText(TITLE, W / 2, 62);
+
+  ctx.fillStyle = C.gray;
+  ctx.font = '500 23px Inter, "Noto Sans JP", sans-serif';
+  ctx.fillText(SUBTITLE, W / 2, 110);
+
+  // 進捗バッジ
   const n = filledCount();
-  ctx.font = '500 26px "Noto Sans JP", sans-serif';
-  ctx.fillStyle = C.accent;
+  const lines = bingoLines().length;
   let statusText = `${n} / 9 発掘`;
   if (n === 9) statusText += "  ・  コンプリート!";
   else if (lines > 0) statusText += `  ・  ${lines}ライン BINGO!`;
-  ctx.fillText(statusText, W / 2, 124);
+
+  ctx.font = '700 26px Inter, "Noto Sans JP", sans-serif';
+  const tw = ctx.measureText(statusText).width;
+  const bw = tw + 46, bh = 44, bx = (W - bw) / 2, by = 134;
+  ctx.fillStyle = lines > 0 ? C.sea : C.land;
+  roundRectPath(ctx, bx, by, bw, bh, bh / 2);
+  ctx.fill();
+  ctx.fillStyle = lines > 0 ? "#FFFFFF" : C.brown;
+  ctx.fillText(statusText, W / 2, by + bh / 2 + 1);
 
   // 盤面の下地
-  ctx.fillStyle = C.theme;
-  roundRectPath(ctx, PAD - 10, HEADER - 10, grid + 20, grid + 20, 22);
+  ctx.fillStyle = C.brown;
+  roundRectPath(ctx, PAD - 9, HEADER - 9, grid + 18, grid + 18, 20);
   ctx.fill();
 
   const imgs = await Promise.all(cells.map(c => c.photo ? loadImage(c.photo) : null));
@@ -457,48 +466,39 @@ async function buildImage() {
     const img = imgs[i];
 
     ctx.save();
-    roundRectPath(ctx, x, y, box, box, 14);
+    roundRectPath(ctx, x, y, box, box, 12);
     ctx.clip();
 
     if (img) {
       drawPhotoCover(ctx, img, x, y, box, box);
-      // 下部のグラデーション帯 + お題
-      const bandH = 62;
+      const bandH = 64;
       const grad = ctx.createLinearGradient(0, y + box - bandH, 0, y + box);
-      grad.addColorStop(0, "rgba(44,24,9,0)");
-      grad.addColorStop(1, "rgba(44,24,9,0.93)");
+      grad.addColorStop(0, "rgba(70,40,20,0)");
+      grad.addColorStop(1, "rgba(70,40,20,0.93)");
       ctx.fillStyle = grad;
       ctx.fillRect(x, y + box - bandH, box, bandH);
-      ctx.fillStyle = C.cream;
-      ctx.font = '500 21px "Noto Sans JP", sans-serif';
+      ctx.fillStyle = C.base;
+      ctx.font = '500 21px Inter, "Noto Sans JP", sans-serif';
       drawCenteredText(ctx, cell.topic || CENTER_LABEL, x + box / 2, y + box - 26, box - 20, 24);
     } else {
-      ctx.fillStyle = cell.isCenter ? C.light : C.mid;
+      ctx.fillStyle = cell.isCenter ? C.land : C.base;
       ctx.fillRect(x, y, box, box);
-      ctx.fillStyle = C.cream;
-      ctx.font = '500 26px "Noto Sans JP", sans-serif';
+      ctx.fillStyle = C.brown;
+      ctx.font = '500 26px Inter, "Noto Sans JP", sans-serif';
       drawCenteredText(ctx, cell.topic || (cell.isCenter ? CENTER_LABEL : ""), x + box / 2, y + box / 2, box - 34, 34);
     }
     ctx.restore();
-
-    if (cell.isCenter) {
-      ctx.strokeStyle = C.accent;
-      ctx.lineWidth = 4;
-      roundRectPath(ctx, x + 2, y + 2, box - 4, box - 4, 13);
-      ctx.stroke();
-    }
   });
 
   // フッター
   const d = new Date();
   const dateStr = `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
-  ctx.textAlign = "center";
-  ctx.fillStyle = C.accent;
-  ctx.font = '700 30px "Noto Sans JP", sans-serif';
-  ctx.fillText(HASHTAG, W / 2, HEADER + grid + 52);
-  ctx.fillStyle = C.light;
-  ctx.font = '500 24px "Noto Sans JP", sans-serif';
-  ctx.fillText(dateStr, W / 2, HEADER + grid + 94);
+  ctx.fillStyle = C.brown;
+  ctx.font = '700 32px Inter, "Noto Sans JP", sans-serif';
+  ctx.fillText(TITLE, W / 2, HEADER + grid + 52);
+  ctx.fillStyle = C.gray;
+  ctx.font = '500 23px Inter, "Noto Sans JP", sans-serif';
+  ctx.fillText(`${dateStr}　福井県勝山市`, W / 2, HEADER + grid + 92);
 
   return new Promise(resolve => canvas.toBlob(resolve, "image/png"));
 }
@@ -512,17 +512,17 @@ document.getElementById("saveBtn").addEventListener("click", async (e) => {
   btn.textContent = "作成中...";
   try {
     const blob = await buildImage();
-    const file = new File([blob], "irifune-photo-bingo.png", { type: "image/png" });
+    const file = new File([blob], "katsuyama-hakkutsu.png", { type: "image/png" });
     const shareData = {
       files: [file],
-      text: `IRIFUNE フォトビンゴで街を発掘してきた！\n${HASHTAG}`
+      text: `勝山のまちを発掘してきた！\n${TITLE} #IRIFUNE #福井県勝山市`
     };
     if (navigator.canShare && navigator.canShare(shareData)) {
       await navigator.share(shareData);
     } else {
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
-      link.download = "irifune-photo-bingo.png";
+      link.download = "katsuyama-hakkutsu.png";
       link.href = url;
       link.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
