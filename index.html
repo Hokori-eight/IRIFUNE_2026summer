@@ -17,6 +17,7 @@
     --sky:   #73B4C0;  /* sky */
     --sea:   #4F9282;
     --gray:  #727171;
+    --stamp: #C0453C;  /* CLEAR スタンプの朱色 */
   }
   * { box-sizing: border-box; }
   body {
@@ -54,17 +55,52 @@
     font-size: 13px;
     font-weight: 500;
   }
-  .status .bingo {
-    background: var(--sea);
-    color: #fff;
+  .board-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 420px;
+  }
+  .stamp {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 46%;
+    aspect-ratio: 1 / 1;
+    transform: translate(-50%, -50%) rotate(-14deg);
+    border: 6px solid var(--stamp);
+    border-radius: 50%;
+    color: var(--stamp);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    z-index: 5;
+    /* 写真の上でも読めるよう、生成り色のフチを回す */
+    box-shadow: 0 0 0 3px rgba(255,253,243,0.8), inset 0 0 0 3px rgba(255,253,243,0.8);
+    text-shadow: 0 0 7px rgba(255,253,243,0.95), 0 0 3px rgba(255,253,243,1);
+  }
+  .stamp[hidden] { display: none; }
+  .stamp-main {
+    font-size: clamp(22px, 7.2vw, 34px);
     font-weight: 700;
-    padding: 3px 11px;
-    border-radius: 999px;
-    font-size: 12px;
+    line-height: 1;
+    letter-spacing: 0.02em;
+  }
+  .stamp-sub {
+    font-size: clamp(9px, 2.6vw, 12px);
+    font-weight: 700;
+    margin-top: 6px;
+    letter-spacing: 0.16em;
+  }
+  .stamp.pop { animation: stampIn 0.45s cubic-bezier(0.2, 1.4, 0.4, 1); }
+  @keyframes stampIn {
+    0%   { transform: translate(-50%,-50%) rotate(-14deg) scale(2.6); opacity: 0; }
+    55%  { opacity: 1; }
+    100% { transform: translate(-50%,-50%) rotate(-14deg) scale(1);   opacity: 1; }
   }
   .board {
     width: 100%;
-    max-width: 420px;
     aspect-ratio: 1 / 1;
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -195,10 +231,15 @@
 
 <div class="status">
   <span id="count">0 / 9 発掘</span>
-  <span class="bingo" id="bingoBadge" style="display:none">BINGO!</span>
 </div>
 
-<div class="board" id="board"></div>
+<div class="board-wrap">
+  <div class="board" id="board"></div>
+  <div class="stamp" id="stamp" hidden>
+    <span class="stamp-main">CLEAR!</span>
+    <span class="stamp-sub" id="stampSub">BINGO</span>
+  </div>
+</div>
 
 <div class="controls">
   <button id="resetBtn">リセット</button>
@@ -235,7 +276,8 @@ const C = {
   land:  "#B0C8A4",
   sky:   "#73B4C0",
   sea:   "#4F9282",
-  gray:  "#727171"
+  gray:  "#727171",
+  stamp: "#C0453C"
 };
 
 const LINES = [
@@ -276,17 +318,33 @@ function bingoLines() {
   return LINES.filter(line => line.every(i => cells[i].photo));
 }
 
+/* スタンプの押下アニメは、ライン数が増えた瞬間だけ再生する */
+let prevBingo = 0;
+
+function stampSubText(lines, n) {
+  if (n === 9) return "コンプリート";
+  return lines > 1 ? `${lines} LINES` : "BINGO";
+}
+
 function updateStatus() {
   const n = filledCount();
   document.getElementById("count").textContent = `${n} / 9 発掘`;
+
   const lines = bingoLines().length;
-  const badge = document.getElementById("bingoBadge");
+  const stamp = document.getElementById("stamp");
   if (lines > 0) {
-    badge.style.display = "";
-    badge.textContent = n === 9 ? "コンプリート!" : (lines > 1 ? `${lines}ライン BINGO!` : "BINGO!");
+    document.getElementById("stampSub").textContent = stampSubText(lines, n);
+    stamp.hidden = false;
+    if (lines > prevBingo) {
+      stamp.classList.remove("pop");
+      void stamp.offsetWidth;  // アニメを頭から再生させるためリフローを挟む
+      stamp.classList.add("pop");
+    }
   } else {
-    badge.style.display = "none";
+    stamp.hidden = true;
+    stamp.classList.remove("pop");
   }
+  prevBingo = lines;
 }
 
 function render() {
@@ -396,6 +454,39 @@ function drawCenteredText(ctx, text, cx, cy, maxWidth, lineHeight) {
   lines.forEach((l, i) => ctx.fillText(l, cx, startY + i * lineHeight));
 }
 
+/* 盤面の中央に CLEAR スタンプを押す */
+function drawStamp(ctx, cx, cy, r, subText) {
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(-14 * Math.PI / 180);
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+
+  // 写真の上でも読めるように、生成り色のフチを回す
+  ctx.shadowColor = "rgba(255,253,243,0.95)";
+  ctx.shadowBlur = 14;
+
+  ctx.strokeStyle = C.stamp;
+  ctx.lineWidth = r * 0.075;
+  ctx.beginPath();
+  ctx.arc(0, 0, r, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.lineWidth = r * 0.028;
+  ctx.beginPath();
+  ctx.arc(0, 0, r * 0.87, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.fillStyle = C.stamp;
+  ctx.font = `700 ${Math.round(r * 0.46)}px Inter, "Noto Sans JP", sans-serif`;
+  ctx.fillText("CLEAR!", 0, -r * 0.08);
+
+  ctx.font = `700 ${Math.round(r * 0.155)}px Inter, "Noto Sans JP", sans-serif`;
+  ctx.fillText(subText, 0, r * 0.34);
+
+  ctx.restore();
+}
+
 function drawPhotoCover(ctx, img, x, y, w, h) {
   const imgRatio = img.width / img.height;
   const boxRatio = w / h;
@@ -417,7 +508,7 @@ async function buildImage() {
   const PAD = 44;
   const GAP = 12;
   const HEADER = 186;
-  const FOOTER = 128;
+  const FOOTER = 112;
   const grid = W - PAD * 2;
   const box = (grid - GAP * 2) / 3;
   const H = HEADER + grid + FOOTER;
@@ -442,12 +533,10 @@ async function buildImage() {
   ctx.font = '500 23px Inter, "Noto Sans JP", sans-serif';
   ctx.fillText(SUBTITLE, W / 2, 110);
 
-  // 進捗バッジ
+  // 進捗バッジ（CLEAR はスタンプで示すので、ここは発掘数だけ）
   const n = filledCount();
   const lines = bingoLines().length;
-  let statusText = `${n} / 9 発掘`;
-  if (n === 9) statusText += "  ・  コンプリート!";
-  else if (lines > 0) statusText += `  ・  ${lines}ライン BINGO!`;
+  const statusText = `${n} / 9 発掘`;
 
   ctx.font = '700 26px Inter, "Noto Sans JP", sans-serif';
   const tw = ctx.measureText(statusText).width;
@@ -495,15 +584,17 @@ async function buildImage() {
     ctx.restore();
   });
 
-  // フッター
+  // ビンゴ成立時は盤面中央に CLEAR スタンプ
+  if (lines > 0) {
+    drawStamp(ctx, W / 2, HEADER + grid / 2, grid * 0.21, stampSubText(lines, n));
+  }
+
+  // フッター（ハッシュタグはタイトルと重複するので置かない）
   const d = new Date();
   const dateStr = `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
-  ctx.fillStyle = C.brown;
-  ctx.font = '700 32px Inter, "Noto Sans JP", sans-serif';
-  ctx.fillText(TITLE, W / 2, HEADER + grid + 52);
   ctx.fillStyle = C.gray;
-  ctx.font = '500 23px Inter, "Noto Sans JP", sans-serif';
-  ctx.fillText(`${dateStr}　福井県勝山市`, W / 2, HEADER + grid + 92);
+  ctx.font = '500 24px Inter, "Noto Sans JP", sans-serif';
+  ctx.fillText(`${dateStr}　福井県勝山市`, W / 2, HEADER + grid + 62);
 
   return new Promise(resolve => canvas.toBlob(resolve, "image/png"));
 }
