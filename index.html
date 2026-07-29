@@ -314,7 +314,7 @@
     <div class="sheet-note"  id="geoNote"></div>
     <button class="primary" id="geoShootBtn" hidden>撮影する</button>
     <button class="plain"   id="geoRetryBtn" hidden>もう一度確認する</button>
-    <button class="quiet"   id="geoAnywayBtn" hidden>それでも撮影する</button>
+    <button class="quiet"   id="geoAnywayBtn" hidden>このまま撮影する</button>
     <button class="quiet"   id="geoCancelBtn">キャンセル</button>
   </div>
 </div>
@@ -664,7 +664,7 @@ async function runGeoCheck() {
   const note  = document.getElementById("geoNote");
 
   geoPassed = false;
-  title.textContent = `${name} … 現在地を確認しています`;
+  title.textContent = `${name}… 現在地を確認しています`;
   note.textContent = "屋外のほうが正確に測れます。";
   setGeoButtons(false, false, false);
 
@@ -673,10 +673,10 @@ async function runGeoCheck() {
     pos = await currentPosition();
   } catch (err) {
     if (geoIndex !== index) return;   // 待っている間に閉じられた
-    title.textContent = "現在地を取得できませんでした";
+    title.textContent = "現在地が わかりませんでした";
     note.textContent = (err && err.code === 1)
-      ? "位置情報の利用が許可されていません。\nブラウザの設定で許可すると、現地判定ができます。"
-      : "電波や建物の影響かもしれません。\n少し場所を移して、もう一度お試しください。";
+      ? "位置情報の利用が許可されていないようです。\nブラウザの設定で許可すると、現地の判定ができます。"
+      : "電波や建物の影響かもしれません。\n少し場所を移して、もう一度どうぞ。";
     setGeoButtons(false, true, true);
     return;
   }
@@ -689,12 +689,12 @@ async function runGeoCheck() {
 
   if (dist - margin <= radius) {
     geoPassed = true;
-    title.textContent = `正解！ ${name} に到着しました`;
+    title.textContent = `正解！ ${name}に到着しました`;
     note.textContent  = `目標まで約 ${formatDistance(dist)}`;
     setGeoButtons(true, false, false);
   } else {
-    title.textContent = `まだ ${name} まで届いていません`;
-    note.textContent  = `あと約 ${formatDistance(dist - radius)}。\n近づいたら、もう一度確認してください。`;
+    title.textContent = `${name}は もう少し先のようです`;
+    note.textContent  = `あと約 ${formatDistance(dist - radius)}。\n近づいたら、もう一度どうぞ。`;
     setGeoButtons(false, true, true);
   }
 }
@@ -833,17 +833,25 @@ async function buildImage() {
   await document.fonts.load('500 26px "Noto Sans JP"');
   await document.fonts.ready;
 
-  const W = 1620;            // 1マスあたり約520px
+  // Instagram のフィードに収まる 4:5。この枠に合わせて盤面の大きさを決める
+  const W = 1620;
+  const H = Math.round(W * 5 / 4);
   const k = W / 1080;        // 従来比の拡大率
-  const PAD = 44 * k;
   const GAP = 12 * k;
-  const HEADER = 186 * k;
-  const FOOTER = 156 * k;
-  const gridW = W - PAD * 2;
-  const boxW = (gridW - GAP * 2) / 3;
-  const boxH = boxW * CELL_RATIO;          // マスは縦長
+  const HEADER = 168 * k;
+  const FOOTER = 112 * k;
+
+  const room = H - HEADER - FOOTER;          // 盤面に使える高さ
+  let boxH = (room - GAP * 2) / 3;
+  let boxW = boxH / CELL_RATIO;
+  // 横にはみ出すなら幅のほうで決め直す（マスが横長寄りのときの保険）
+  const maxBoxW = (W - 88 * k - GAP * 2) / 3;
+  if (boxW > maxBoxW) { boxW = maxBoxW; boxH = boxW * CELL_RATIO; }
+
+  const gridW = boxW * 3 + GAP * 2;
   const gridH = boxH * 3 + GAP * 2;
-  const H = Math.round(HEADER + gridH + FOOTER);
+  const PAD = (W - gridW) / 2;               // 左右は自動で振り分ける
+  const TOP = HEADER + (room - gridH) / 2;   // 余りが出たら上下にも振り分ける
 
   const canvas = document.createElement("canvas");
   canvas.width = W;
@@ -858,7 +866,7 @@ async function buildImage() {
   // ヘッダー
   ctx.fillStyle = C.brown;
   ctx.font = `700 ${54 * k}px Inter, "Noto Sans JP", sans-serif`;
-  ctx.fillText(TITLE, W / 2, 74 * k);
+  ctx.fillText(TITLE, W / 2, 62 * k);
 
   // 進捗バッジ。ビンゴしたら写真を隠さないよう、ここに文字で足す
   const n = filledCount();
@@ -870,7 +878,7 @@ async function buildImage() {
   const gapW = tagText ? 16 * k : 0;
   const tw = tagText ? ctx.measureText(tagText).width : 0;
   const bw = sw + gapW + tw + 46 * k;
-  const bh = 44 * k, bx = (W - bw) / 2, by = 134 * k;
+  const bh = 44 * k, bx = (W - bw) / 2, by = 106 * k;
   ctx.fillStyle = C.land;
   roundRectPath(ctx, bx, by, bw, bh, bh / 2);
   ctx.fill();
@@ -885,14 +893,14 @@ async function buildImage() {
 
   // 盤面の下地
   ctx.fillStyle = C.brown;
-  roundRectPath(ctx, PAD - 9 * k, HEADER - 9 * k, gridW + 18 * k, gridH + 18 * k, 20 * k);
+  roundRectPath(ctx, PAD - 9 * k, TOP - 9 * k, gridW + 18 * k, gridH + 18 * k, 20 * k);
   ctx.fill();
 
   const imgs = await Promise.all(cells.map(c => c.photo ? loadImage(c.photo) : null));
 
   cells.forEach((cell, i) => {
     const x = PAD + (i % 3) * (boxW + GAP);
-    const y = HEADER + Math.floor(i / 3) * (boxH + GAP);
+    const y = TOP + Math.floor(i / 3) * (boxH + GAP);
     const img = imgs[i];
 
     ctx.save();
@@ -923,11 +931,11 @@ async function buildImage() {
   // フッター（ハッシュタグはタイトルと重複するので置かない）
   const d = new Date();
   const dateStr = `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
-  const fy = HEADER + gridH;
+  const fy = TOP + gridH;
 
   ctx.fillStyle = C.gray;
   ctx.font = `500 ${23 * k}px Inter, "Noto Sans JP", sans-serif`;
-  ctx.fillText(`${dateStr}　福井県勝山市`, W / 2, fy + 50 * k);
+  ctx.fillText(`${dateStr}　福井県勝山市`, W / 2, fy + 42 * k);
 
   // ロゴ＋ハウスネームを最下部に置く
   ctx.fillStyle = C.brown;
@@ -937,7 +945,7 @@ async function buildImage() {
   const textW = ctx.measureText(houseText).width;
   const totalW = (logoBrown ? logoSize + 12 * k : 0) + textW;
   const startX = (W - totalW) / 2;
-  const houseY = fy + 108 * k;
+  const houseY = fy + 88 * k;
   if (logoBrown) {
     ctx.drawImage(logoBrown, startX, houseY - logoSize / 2, logoSize, logoSize);
   }
