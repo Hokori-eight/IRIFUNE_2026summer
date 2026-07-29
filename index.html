@@ -73,23 +73,18 @@
     padding: 6px;
     border-radius: 14px;
   }
-  /* スタンプは canvas で作った画像。盤面いっぱいに重ねる */
-  #stampImg {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    width: 100%;
-    transform: translate(-50%, -50%) rotate(-13deg);
-    pointer-events: none;
-    z-index: 5;
-    filter: drop-shadow(0 0 5px rgba(255,253,243,0.5));
+  /* ビンゴの合図。写真を隠さないよう、盤面の外に文字だけで出す */
+  #bingoTag {
+    color: var(--stamp);
+    font-weight: 700;
+    margin-left: 8px;
   }
-  #stampImg[hidden] { display: none; }
-  #stampImg.pop { animation: stampIn 0.42s cubic-bezier(0.2, 1.5, 0.4, 1); }
-  @keyframes stampIn {
-    0%   { transform: translate(-50%,-50%) rotate(-13deg) scale(2.4); opacity: 0; }
+  #bingoTag[hidden] { display: none; }
+  #bingoTag.pop { animation: tagIn 0.4s cubic-bezier(0.2, 1.5, 0.4, 1); display: inline-block; }
+  @keyframes tagIn {
+    0%   { transform: scale(2.2); opacity: 0; }
     55%  { opacity: 1; }
-    100% { transform: translate(-50%,-50%) rotate(-13deg) scale(1);   opacity: 1; }
+    100% { transform: scale(1);   opacity: 1; }
   }
   .cell {
     position: relative;
@@ -278,11 +273,10 @@
   <h1>#勝山発掘まちあるき</h1>
 </header>
 
-<div class="status"><span id="count">0 / 9 発掘</span></div>
+<div class="status"><span id="count">0 / 9 発掘</span><span id="bingoTag" hidden></span></div>
 
 <div class="board-wrap">
   <div class="board" id="board"></div>
-  <img id="stampImg" alt="CLEAR" hidden>
 </div>
 
 <div class="controls">
@@ -344,13 +338,23 @@ const TOPICS = [
   "梅から生える\n松の木"
 ];
 
-/* お題ごとの現地判定。TOPICS と同じ文字列をキーにして緯度・経度・許容半径(m)を入れます。
+/* お題ごとの現地判定。キーは TOPICS と同じ文字列にします。
+   書き方は3通り。r は許容距離（m）で、省略すると DEFAULT_RADIUS になります。
+     一点   { lat, lng, r }                  … 単体で建っているもの
+     線     { line: [[lat,lng], …], r }      … 七里壁のように連なっているもの
+     点在   { any:  [[lat,lng], …], r }      … マンホールのように何か所もあるもの
    座標が未登録のお題は判定なしで、これまで通りすぐ撮影できます。
    座標は URL の末尾に ?spots を付けて開くと、現地で記録できます。 */
 const SPOTS = {
-  // "大清水": { lat: 36.000000, lng: 136.000000, r: 60 },
+  "入船電柱":        { lat: 36.060751, lng: 136.497355 },
+  "大清水":          { lat: 36.060226, lng: 136.497574 },
+  "ダイナ荘":        { lat: 36.060101, lng: 136.499008 },
+  "恐竜ポスト":      { lat: 36.058741, lng: 136.497270 },
+  "梅から生える\n松の木": { lat: 36.060654, lng: 136.497221 }
+  // 七里壁・恐竜マンホール・消火栓モグラは座標待ち
 };
-const DEFAULT_RADIUS = 60;   // 許容半径のきほん値（m）
+const DEFAULT_RADIUS = 40;   // 許容距離のきほん値（m）
+const MAX_GPS_MARGIN = 30;   // GPS 誤差を大目に見る上限（m）
 const GEO_TIMEOUT = 12000;
 
 const CENTER_INDEX = 4;
@@ -390,6 +394,39 @@ function distanceMeters(a, b) {
   const s = Math.sin(dLat / 2) ** 2 +
             Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
   return 2 * R * Math.asin(Math.sqrt(s));
+}
+
+/* 狭い範囲なので、緯度経度をそのままメートルの平面に置き換えて計算する */
+function toXY(p, origin) {
+  const R = 6371000, toRad = d => d * Math.PI / 180;
+  return {
+    x: R * toRad(p.lng - origin.lng) * Math.cos(toRad(origin.lat)),
+    y: R * toRad(p.lat - origin.lat)
+  };
+}
+
+/* 点から線分までの最短距離。七里壁のように連なった場所で使う */
+function distanceToSegment(p, a, b) {
+  const A = toXY(a, p), B = toXY(b, p);   // p を原点に置く
+  const vx = B.x - A.x, vy = B.y - A.y;
+  const len2 = vx * vx + vy * vy;
+  if (len2 === 0) return Math.hypot(A.x, A.y);
+  let t = (-A.x * vx - A.y * vy) / len2;
+  t = Math.max(0, Math.min(1, t));
+  return Math.hypot(A.x + t * vx, A.y + t * vy);
+}
+
+function distanceToSpot(pos, spot) {
+  const pt = ll => ({ lat: ll[0], lng: ll[1] });
+  if (spot.line && spot.line.length > 1) {
+    let best = Infinity;
+    for (let i = 0; i < spot.line.length - 1; i++) {
+      best = Math.min(best, distanceToSegment(pos, pt(spot.line[i]), pt(spot.line[i + 1])));
+    }
+    return best;
+  }
+  const list = spot.any || spot.line || [[spot.lat, spot.lng]];
+  return Math.min(...list.map(ll => distanceMeters(pos, pt(ll))));
 }
 
 function spotOf(cell) {
@@ -462,19 +499,8 @@ async function toDisplayDataUrl(file, max = 1500) {
   }
 }
 
-/* ---------- CLEAR スタンプ ---------- */
+/* ---------- ロゴ ---------- */
 
-/* 掠れ具合を毎回同じにするための擬似乱数 */
-function mulberry32(seed) {
-  return function () {
-    seed |= 0; seed = seed + 0x6D2B79F5 | 0;
-    let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
-    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
-    return ((t ^ t >>> 14) >>> 0) / 4294967296;
-  };
-}
-
-let logoMask  = null;  /* スタンプ用（朱色） */
 let logoBrown = null;  /* フッター用（濃茶） */
 
 /* 白地・濃色のロゴPNGを、明るさからアルファを起こして任意の一色に置き換える */
@@ -495,118 +521,33 @@ function tintLogo(img, r, g, b) {
   return cv;
 }
 
-/* 丸枠のインクを部分的に削って、押しムラのある枠にする（文字とロゴには触れない） */
-function erodeRing(rx, S, cx, cy, r) {
-  const rnd = mulberry32(20260728);
-  rx.globalCompositeOperation = "destination-out";
-
-  // 枠線の上に乗るような半径を選ぶ
-  const onRing = () => (rnd() < 0.65 ? r : r * 0.885) * (0.97 + rnd() * 0.06);
-
-  // インクの欠け
-  for (let i = 0; i < 12; i++) {
-    const a = rnd() * Math.PI * 2, d = onRing();
-    rx.beginPath();
-    rx.arc(cx + Math.cos(a) * d, cy + Math.sin(a) * d, S * (0.004 + rnd() * 0.009), 0, Math.PI * 2);
-    rx.fill();
-  }
-  // 細かい擦れ
-  for (let i = 0; i < 170; i++) {
-    const a = rnd() * Math.PI * 2, d = onRing();
-    rx.beginPath();
-    rx.arc(cx + Math.cos(a) * d, cy + Math.sin(a) * d, S * (0.0010 + rnd() * 0.0030), 0, Math.PI * 2);
-    rx.fill();
-  }
-  // 枠が途切れたように見える弧
-  rx.lineCap = "round";
-  for (let i = 0; i < 3; i++) {
-    const a = rnd() * Math.PI * 2;
-    const span = 0.03 + rnd() * 0.06;
-    rx.lineWidth = S * (0.005 + rnd() * 0.009);
-    rx.beginPath();
-    rx.arc(cx, cy, rnd() < 0.65 ? r : r * 0.885, a, a + span);
-    rx.stroke();
-  }
-  rx.globalCompositeOperation = "source-over";
-}
-
-const stampCache = new Map();
-
-function makeStampCanvas(subText) {
-  if (stampCache.has(subText)) return stampCache.get(subText);
-
-  const S = 1400;
-  const cv = document.createElement("canvas");
-  cv.width = cv.height = S;
-  const x = cv.getContext("2d");
-  const cx = S / 2, cy = S / 2, r = S * 0.40;
-
-  // 二重の外枠だけは別レイヤーに描き、掠れさせてから合成する
-  const ring = document.createElement("canvas");
-  ring.width = ring.height = S;
-  const rx = ring.getContext("2d");
-  rx.strokeStyle = C.stamp;
-  rx.lineWidth = S * 0.030;
-  rx.beginPath(); rx.arc(cx, cy, r, 0, Math.PI * 2); rx.stroke();
-  rx.lineWidth = S * 0.010;
-  rx.beginPath(); rx.arc(cx, cy, r * 0.885, 0, Math.PI * 2); rx.stroke();
-  erodeRing(rx, S, cx, cy, r);
-  x.drawImage(ring, 0, 0);
-
-  x.strokeStyle = C.stamp;
-  x.fillStyle = C.stamp;
-  x.textAlign = "center";
-  x.textBaseline = "middle";
-
-  // IRIFUNE のシンボルマーク
-  if (logoMask) {
-    const lw = S * 0.30, lh = lw;
-    x.drawImage(logoMask, cx - lw / 2, cy - S * 0.245 - lh / 2, lw, lh);
-  }
-
-  x.font = `700 ${Math.round(S * 0.185)}px Inter, "Noto Sans JP", sans-serif`;
-  x.fillText("CLEAR!", cx, cy + S * 0.045);
-
-  // 区切り線
-  x.lineWidth = S * 0.006;
-  x.beginPath();
-  x.moveTo(cx - S * 0.15, cy + S * 0.145);
-  x.lineTo(cx + S * 0.15, cy + S * 0.145);
-  x.stroke();
-
-  x.font = `700 ${Math.round(S * 0.055)}px Inter, "Noto Sans JP", sans-serif`;
-  x.fillText(subText, cx, cy + S * 0.205);
-
-  stampCache.set(subText, cv);
-  return cv;
-}
-
-function stampSubText(lines, n) {
-  if (n === 9) return "コンプリート";
-  return lines > 1 ? `${lines} LINES` : "BINGO";
-}
-
 /* ---------- 表示 ---------- */
 
 let prevBingo = 0;
+
+/* ビンゴの見出し。写真に重ねず、進捗の横に文字で添える */
+function bingoLabel(lines, n) {
+  if (n === 9) return "コンプリート！";
+  return lines > 1 ? `${lines} LINES!` : "BINGO!";
+}
 
 function updateStatus() {
   const n = filledCount();
   document.getElementById("count").textContent = `${n} / 9 発掘`;
 
   const lines = bingoLines().length;
-  const stamp = document.getElementById("stampImg");
+  const tag = document.getElementById("bingoTag");
   if (lines > 0) {
-    stamp.src = makeStampCanvas(stampSubText(lines, n)).toDataURL("image/png");
-    stamp.hidden = false;
+    tag.textContent = bingoLabel(lines, n);
+    tag.hidden = false;
     if (lines > prevBingo) {
-      stamp.classList.remove("pop");
-      void stamp.offsetWidth;  // アニメを頭から再生させるためリフローを挟む
-      stamp.classList.add("pop");
+      tag.classList.remove("pop");
+      void tag.offsetWidth;  // アニメを頭から再生させるためリフローを挟む
+      tag.classList.add("pop");
     }
   } else {
-    stamp.hidden = true;
-    stamp.classList.remove("pop");
+    tag.hidden = true;
+    tag.classList.remove("pop");
   }
   prevBingo = lines;
 }
@@ -733,10 +674,10 @@ async function runGeoCheck() {
   }
   if (geoIndex !== index) return;
 
-  const dist   = distanceMeters(pos, spot);
+  const dist   = distanceToSpot(pos, spot);
   const radius = spot.r || DEFAULT_RADIUS;
-  // GPS の誤差ぶんは大目に見る。ただし誤差が大きすぎるときは 80m で頭打ちにする
-  const margin = Math.min(pos.acc || 0, 80);
+  // GPS の誤差ぶんは大目に見る。ただし誤差が大きすぎるときは頭打ちにする
+  const margin = Math.min(pos.acc || 0, MAX_GPS_MARGIN);
 
   if (dist - margin <= radius) {
     geoPassed = true;
@@ -909,18 +850,28 @@ async function buildImage() {
   ctx.font = `700 ${54 * k}px Inter, "Noto Sans JP", sans-serif`;
   ctx.fillText(TITLE, W / 2, 74 * k);
 
-  // 進捗バッジ（CLEAR はスタンプで示すので、ここは発掘数だけ）
+  // 進捗バッジ。ビンゴしたら写真を隠さないよう、ここに文字で足す
   const n = filledCount();
   const lines = bingoLines().length;
   const statusText = `${n} / 9 発掘`;
+  const tagText = lines > 0 ? bingoLabel(lines, n) : "";
   ctx.font = `700 ${26 * k}px Inter, "Noto Sans JP", sans-serif`;
-  const bw = ctx.measureText(statusText).width + 46 * k;
+  const sw = ctx.measureText(statusText).width;
+  const gapW = tagText ? 16 * k : 0;
+  const tw = tagText ? ctx.measureText(tagText).width : 0;
+  const bw = sw + gapW + tw + 46 * k;
   const bh = 44 * k, bx = (W - bw) / 2, by = 134 * k;
   ctx.fillStyle = C.land;
   roundRectPath(ctx, bx, by, bw, bh, bh / 2);
   ctx.fill();
+  ctx.textAlign = "left";
   ctx.fillStyle = C.brown;
-  ctx.fillText(statusText, W / 2, by + bh / 2 + 1);
+  ctx.fillText(statusText, bx + 23 * k, by + bh / 2 + 1);
+  if (tagText) {
+    ctx.fillStyle = C.stamp;
+    ctx.fillText(tagText, bx + 23 * k + sw + gapW, by + bh / 2 + 1);
+  }
+  ctx.textAlign = "center";
 
   // 盤面の下地
   ctx.fillStyle = C.brown;
@@ -958,18 +909,6 @@ async function buildImage() {
     }
     ctx.restore();
   });
-
-  // ビンゴ成立時は盤面いっぱいに CLEAR スタンプ
-  if (lines > 0) {
-    const stamp = makeStampCanvas(stampSubText(lines, n));
-    const size = grid * 1.04;
-    ctx.save();
-    ctx.translate(W / 2, HEADER + grid / 2);
-    ctx.rotate(-13 * Math.PI / 180);
-    ctx.globalAlpha = 0.92;
-    ctx.drawImage(stamp, -size / 2, -size / 2, size, size);
-    ctx.restore();
-  }
 
   // フッター（ハッシュタグはタイトルと重複するので置かない）
   const d = new Date();
@@ -1096,7 +1035,13 @@ function startSurvey() {
     'できあがったコードを index.html の <code>SPOTS</code> に貼り付けます。</p>' +
     '<div class="now" id="svNow">現在地を取得中…</div>' +
     '<select id="svSel"></select>' +
+    '<select id="svKind">' +
+      '<option value="point">一点だけの場所</option>' +
+      '<option value="line">連なった場所（両端を記録）</option>' +
+      '<option value="any">点在する場所（一つずつ記録）</option>' +
+    '</select>' +
     '<button class="primary" id="svRec">この地点を記録</button>' +
+    '<button class="plain" id="svUndo">このお題の記録を消す</button>' +
     '<textarea id="svOut" readonly></textarea>' +
     '<button class="plain" id="svCopy">コードをコピー</button>' +
     '<button class="quiet" id="svClose">ビンゴに戻る</button>';
@@ -1110,13 +1055,18 @@ function startSurvey() {
   });
 
   let here = null;
-  const recorded = {};
+  const recorded = {};   /* お題 → { kind, points: [{lat,lng}, …] } */
+  const six = v => v.toFixed(6);
 
   const paint = () => {
-    const rows = Object.keys(recorded).map(t =>
-      `  ${JSON.stringify(t)}: { lat: ${recorded[t].lat.toFixed(6)}, ` +
-      `lng: ${recorded[t].lng.toFixed(6)}, r: ${DEFAULT_RADIUS} },`
-    );
+    const rows = Object.keys(recorded).map(t => {
+      const { kind, points } = recorded[t];
+      const list = points.map(p => `[${six(p.lat)}, ${six(p.lng)}]`).join(", ");
+      const body = (kind === "point" || points.length === 1) && kind !== "line"
+        ? `{ lat: ${six(points[0].lat)}, lng: ${six(points[0].lng)} }`
+        : `{ ${kind}: [${list}] }`;
+      return `  ${JSON.stringify(t)}: ${body},`;
+    });
     document.getElementById("svOut").value =
       "const SPOTS = {" + (rows.length ? "\n" + rows.join("\n") + "\n" : "") + "};";
   };
@@ -1132,7 +1082,18 @@ function startSurvey() {
 
   document.getElementById("svRec").addEventListener("click", () => {
     if (!here) { alert("まだ現在地を取得できていません。"); return; }
-    recorded[sel.value] = here;
+    const kind = document.getElementById("svKind").value;
+    const entry = recorded[sel.value];
+    // 一点なら上書き、線と点在なら押すたびに足していく
+    if (!entry || entry.kind !== kind || kind === "point") {
+      recorded[sel.value] = { kind, points: [{ lat: here.lat, lng: here.lng }] };
+    } else {
+      entry.points.push({ lat: here.lat, lng: here.lng });
+    }
+    paint();
+  });
+  document.getElementById("svUndo").addEventListener("click", () => {
+    delete recorded[sel.value];
     paint();
   });
   document.getElementById("svCopy").addEventListener("click", async () => {
@@ -1148,18 +1109,10 @@ render();
 
 if (location.search.includes("spots")) startSurvey();
 
-// ロゴとフォントが揃った時点でスタンプを作り直す
+// 保存画像のフッターで使うロゴを、濃茶に染めて用意しておく
 loadImage(LOGO_SRC).then(img => {
-  logoMask  = tintLogo(img, 0xC0, 0x45, 0x3C);
   logoBrown = tintLogo(img, 0x46, 0x28, 0x14);
-  stampCache.clear();
-  updateStatus();
-}).catch(() => { /* ロゴが無くてもスタンプとフッターは成立する */ });
-
-document.fonts.ready.then(() => {
-  stampCache.clear();
-  updateStatus();
-});
+}).catch(() => { /* ロゴが無くてもフッターは成立する */ });
 </script>
 
 </body>
