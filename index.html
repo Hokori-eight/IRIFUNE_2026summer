@@ -711,7 +711,7 @@ async function runGeoCheck() {
 
   if (dist - margin <= radius) {
     geoPassed = true;
-    setGeoTitle("到達！ ", name);
+    setGeoTitle("発見！ ", name);
     note.textContent = "発掘ポイントに立っています。\nさあ、記録しましょう。";
     setGeoButtons(true, false, false);
   } else {
