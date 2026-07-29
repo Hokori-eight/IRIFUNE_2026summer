@@ -215,6 +215,61 @@
   .sheet .primary { background: var(--sea); color: #fff; }
   .sheet .plain   { background: transparent; color: var(--brown); box-shadow: inset 0 0 0 1.5px var(--brown); }
   .sheet .quiet   { background: transparent; color: var(--gray); font-weight: 500; }
+  .sheet .sheet-note {
+    text-align: center;
+    font-size: 11px;
+    line-height: 1.6;
+    color: var(--gray);
+    padding: 0 10px 8px;
+    white-space: pre-line;
+  }
+
+  /* 現地判定に合格したマスの印 */
+  .cell .geo-ok {
+    position: absolute;
+    top: 5px; right: 5px;
+    z-index: 3;
+    width: 17px; height: 17px;
+    border-radius: 999px;
+    background: var(--sea);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* 座標の下見モード（?spots） */
+  #survey {
+    position: fixed;
+    inset: 0;
+    z-index: 80;
+    background: var(--base);
+    padding: 16px;
+    overflow: auto;
+    font-size: 13px;
+    line-height: 1.7;
+  }
+  #survey[hidden] { display: none; }
+  #survey h2 { font-size: 15px; margin: 0 0 8px; }
+  #survey .now { font-size: 16px; font-weight: 700; margin: 8px 0; }
+  #survey select, #survey textarea {
+    width: 100%;
+    font-family: inherit;
+    font-size: 12px;
+    padding: 8px;
+    border-radius: 8px;
+    border: 1.5px solid var(--brown);
+    background: #fff;
+    color: var(--brown);
+    margin: 4px 0 10px;
+  }
+  #survey textarea { height: 190px; white-space: pre; }
+  #survey button { width: 100%; margin-bottom: 8px; }
+  #survey .primary { background: var(--sea); color: #fff; }
+  #survey .plain   { background: transparent; color: var(--brown); box-shadow: inset 0 0 0 1.5px var(--brown); }
+  #survey .quiet   { background: transparent; color: var(--gray); font-weight: 500; }
 </style>
 </head>
 <body>
@@ -254,6 +309,19 @@
   </div>
 </div>
 
+<div class="sheet-back" id="geoBack" hidden>
+  <div class="sheet">
+    <div class="sheet-title" id="geoTitle"></div>
+    <div class="sheet-note"  id="geoNote"></div>
+    <button class="primary" id="geoShootBtn" hidden>撮影する</button>
+    <button class="plain"   id="geoRetryBtn" hidden>もう一度確認する</button>
+    <button class="quiet"   id="geoAnywayBtn" hidden>それでも撮影する</button>
+    <button class="quiet"   id="geoCancelBtn">キャンセル</button>
+  </div>
+</div>
+
+<div id="survey" hidden></div>
+
 <div class="sheet-back" id="sheetBack" hidden>
   <div class="sheet">
     <div class="sheet-title" id="sheetTitle"></div>
@@ -275,6 +343,15 @@ const TOPICS = [
   "入船電柱",
   "梅から生える\n松の木"
 ];
+
+/* お題ごとの現地判定。TOPICS と同じ文字列をキーにして緯度・経度・許容半径(m)を入れます。
+   座標が未登録のお題は判定なしで、これまで通りすぐ撮影できます。
+   座標は URL の末尾に ?spots を付けて開くと、現地で記録できます。 */
+const SPOTS = {
+  // "大清水": { lat: 36.000000, lng: 136.000000, r: 60 },
+};
+const DEFAULT_RADIUS = 60;   // 許容半径のきほん値（m）
+const GEO_TIMEOUT = 12000;
 
 const CENTER_INDEX = 4;
 const CENTER_LABEL = "発掘マス";
@@ -299,8 +376,40 @@ const LINES = [
   [0,4,8],[2,4,6]
 ];
 
-/* cell = { topic, file: 撮影した元ファイル, photo: 表示用に縮小した dataURL } */
+/* cell = { topic, file: 撮影した元ファイル, photo: 表示用に縮小した dataURL, verified: 現地判定に合格したか } */
 let cells = [];
+
+/* ---------- 現地判定（位置情報は端末の中だけで使い、どこにも送りません） ---------- */
+
+/* 2地点の距離をメートルで返す（球面近似） */
+function distanceMeters(a, b) {
+  const R = 6371000;
+  const toRad = d => d * Math.PI / 180;
+  const dLat = toRad(b.lat - a.lat);
+  const dLng = toRad(b.lng - a.lng);
+  const s = Math.sin(dLat / 2) ** 2 +
+            Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(s));
+}
+
+function spotOf(cell) {
+  return cell.isCenter ? null : (SPOTS[cell.topic] || null);
+}
+
+function currentPosition() {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) { reject(new Error("unsupported")); return; }
+    navigator.geolocation.getCurrentPosition(
+      p => resolve({ lat: p.coords.latitude, lng: p.coords.longitude, acc: p.coords.accuracy }),
+      err => reject(err),
+      { enableHighAccuracy: true, timeout: GEO_TIMEOUT, maximumAge: 0 }
+    );
+  });
+}
+
+function formatDistance(m) {
+  return m >= 1000 ? `${(m / 1000).toFixed(1)}km` : `${Math.round(m)}m`;
+}
 
 function shuffle(arr) {
   const a = arr.slice();
@@ -317,9 +426,9 @@ function initCells() {
   let idx = 0;
   for (let i = 0; i < 9; i++) {
     if (i === CENTER_INDEX) {
-      cells.push({ topic: "", file: null, photo: null, isCenter: true });
+      cells.push({ topic: "", file: null, photo: null, isCenter: true, verified: false });
     } else {
-      cells.push({ topic: shuffled[idx++], file: null, photo: null, isCenter: false });
+      cells.push({ topic: shuffled[idx++], file: null, photo: null, isCenter: false, verified: false });
     }
   }
 }
@@ -395,25 +504,25 @@ function erodeRing(rx, S, cx, cy, r) {
   const onRing = () => (rnd() < 0.65 ? r : r * 0.885) * (0.97 + rnd() * 0.06);
 
   // インクの欠け
-  for (let i = 0; i < 30; i++) {
+  for (let i = 0; i < 12; i++) {
     const a = rnd() * Math.PI * 2, d = onRing();
     rx.beginPath();
-    rx.arc(cx + Math.cos(a) * d, cy + Math.sin(a) * d, S * (0.005 + rnd() * 0.022), 0, Math.PI * 2);
+    rx.arc(cx + Math.cos(a) * d, cy + Math.sin(a) * d, S * (0.004 + rnd() * 0.009), 0, Math.PI * 2);
     rx.fill();
   }
   // 細かい擦れ
-  for (let i = 0; i < 420; i++) {
+  for (let i = 0; i < 170; i++) {
     const a = rnd() * Math.PI * 2, d = onRing();
     rx.beginPath();
-    rx.arc(cx + Math.cos(a) * d, cy + Math.sin(a) * d, S * (0.0012 + rnd() * 0.0055), 0, Math.PI * 2);
+    rx.arc(cx + Math.cos(a) * d, cy + Math.sin(a) * d, S * (0.0010 + rnd() * 0.0030), 0, Math.PI * 2);
     rx.fill();
   }
   // 枠が途切れたように見える弧
   rx.lineCap = "round";
-  for (let i = 0; i < 7; i++) {
+  for (let i = 0; i < 3; i++) {
     const a = rnd() * Math.PI * 2;
-    const span = 0.05 + rnd() * 0.16;
-    rx.lineWidth = S * (0.006 + rnd() * 0.024);
+    const span = 0.03 + rnd() * 0.06;
+    rx.lineWidth = S * (0.005 + rnd() * 0.009);
     rx.beginPath();
     rx.arc(cx, cy, rnd() < 0.65 ? r : r * 0.885, a, a + span);
     rx.stroke();
@@ -515,6 +624,14 @@ function render() {
       div.appendChild(img);
     }
 
+    if (cell.verified && cell.photo) {
+      const ok = document.createElement("div");
+      ok.className = "geo-ok";
+      ok.textContent = "✓";
+      ok.title = "現地で撮影";
+      div.appendChild(ok);
+    }
+
     if (cell.isCenter) {
       const badge = document.createElement("div");
       badge.className = "badge";
@@ -543,6 +660,8 @@ function render() {
     fileInput.accept = "image/*";
     fileInput.capture = "environment";
     fileInput.className = "file-input";
+    // プログラムから click() したとき、マス自身の click に跳ね返らないようにする
+    fileInput.addEventListener("click", (e) => e.stopPropagation());
     fileInput.addEventListener("change", async (e) => {
       const file = e.target.files[0];
       if (!file) return;
@@ -552,9 +671,11 @@ function render() {
     });
     div.appendChild(fileInput);
 
-    // 写真がまだなら撮影へ、あるなら保存/撮り直しの選択へ
+    // 写真がまだなら撮影へ、あるなら保存/撮り直しの選択へ。
+    // 座標が登録されたお題は、先に現地かどうかを確かめる
     div.addEventListener("click", () => {
       if (cell.photo) openSheet(index);
+      else if (spotOf(cell)) startGeoCheck(index);
       else fileInput.click();
     });
     div._fileInput = fileInput;
@@ -563,6 +684,93 @@ function render() {
   });
   updateStatus();
 }
+
+/* ---------- 現地判定ダイアログ ---------- */
+
+let geoIndex = null;
+let geoPassed = false;
+
+function setGeoButtons(shoot, retry, anyway) {
+  document.getElementById("geoShootBtn").hidden  = !shoot;
+  document.getElementById("geoRetryBtn").hidden  = !retry;
+  document.getElementById("geoAnywayBtn").hidden = !anyway;
+}
+
+function closeGeo() {
+  document.getElementById("geoBack").hidden = true;
+  geoIndex = null;
+}
+
+function openCameraFor(index) {
+  const div = document.getElementById("board").children[index];
+  if (div && div._fileInput) div._fileInput.click();
+}
+
+async function runGeoCheck() {
+  const index = geoIndex;
+  const cell = cells[index];
+  const spot = spotOf(cell);
+  const name = cell.topic.replace(/\n/g, "");
+  const title = document.getElementById("geoTitle");
+  const note  = document.getElementById("geoNote");
+
+  geoPassed = false;
+  title.textContent = `${name} … 現在地を確認しています`;
+  note.textContent = "屋外のほうが正確に測れます。";
+  setGeoButtons(false, false, false);
+
+  let pos;
+  try {
+    pos = await currentPosition();
+  } catch (err) {
+    if (geoIndex !== index) return;   // 待っている間に閉じられた
+    title.textContent = "現在地を取得できませんでした";
+    note.textContent = (err && err.code === 1)
+      ? "位置情報の利用が許可されていません。\nブラウザの設定で許可すると、現地判定ができます。"
+      : "電波や建物の影響かもしれません。\n少し場所を移して、もう一度お試しください。";
+    setGeoButtons(false, true, true);
+    return;
+  }
+  if (geoIndex !== index) return;
+
+  const dist   = distanceMeters(pos, spot);
+  const radius = spot.r || DEFAULT_RADIUS;
+  // GPS の誤差ぶんは大目に見る。ただし誤差が大きすぎるときは 80m で頭打ちにする
+  const margin = Math.min(pos.acc || 0, 80);
+
+  if (dist - margin <= radius) {
+    geoPassed = true;
+    title.textContent = `正解！ ${name} に到着しました`;
+    note.textContent  = `目標まで約 ${formatDistance(dist)}`;
+    setGeoButtons(true, false, false);
+  } else {
+    title.textContent = `まだ ${name} まで届いていません`;
+    note.textContent  = `あと約 ${formatDistance(dist - radius)}。\n近づいたら、もう一度確認してください。`;
+    setGeoButtons(false, true, true);
+  }
+}
+
+function startGeoCheck(index) {
+  geoIndex = index;
+  document.getElementById("geoBack").hidden = false;
+  runGeoCheck();
+}
+
+/* 撮影は必ずボタンのタップから始める（iOS はユーザー操作なしにカメラを開けない） */
+function shootFromGeo() {
+  const i = geoIndex;
+  if (geoPassed) cells[i].verified = true;
+  closeGeo();
+  openCameraFor(i);
+}
+
+document.getElementById("geoShootBtn").addEventListener("click", shootFromGeo);
+document.getElementById("geoAnywayBtn").addEventListener("click", shootFromGeo);
+document.getElementById("geoRetryBtn").addEventListener("click", runGeoCheck);
+document.getElementById("geoCancelBtn").addEventListener("click", closeGeo);
+document.getElementById("geoBack").addEventListener("click", (e) => {
+  if (e.target.id === "geoBack") closeGeo();
+});
 
 /* ---------- 撮影済みマスの操作 ---------- */
 
@@ -877,8 +1085,68 @@ document.getElementById("resetBtn").addEventListener("click", () => {
   }
 });
 
+/* ---------- 座標の下見モード（URL の末尾に ?spots を付けると開く） ----------
+   現地に立って「この地点を記録」を押すと、SPOTS に貼り付けるコードができあがります。 */
+function startSurvey() {
+  const panel = document.getElementById("survey");
+  panel.hidden = false;
+  panel.innerHTML =
+    '<h2>座標の下見モード</h2>' +
+    '<p>お題の場所に立って「この地点を記録」を押してください。' +
+    'できあがったコードを index.html の <code>SPOTS</code> に貼り付けます。</p>' +
+    '<div class="now" id="svNow">現在地を取得中…</div>' +
+    '<select id="svSel"></select>' +
+    '<button class="primary" id="svRec">この地点を記録</button>' +
+    '<textarea id="svOut" readonly></textarea>' +
+    '<button class="plain" id="svCopy">コードをコピー</button>' +
+    '<button class="quiet" id="svClose">ビンゴに戻る</button>';
+
+  const sel = document.getElementById("svSel");
+  TOPICS.forEach(t => {
+    const o = document.createElement("option");
+    o.value = t;
+    o.textContent = t.replace(/\n/g, "");
+    sel.appendChild(o);
+  });
+
+  let here = null;
+  const recorded = {};
+
+  const paint = () => {
+    const rows = Object.keys(recorded).map(t =>
+      `  ${JSON.stringify(t)}: { lat: ${recorded[t].lat.toFixed(6)}, ` +
+      `lng: ${recorded[t].lng.toFixed(6)}, r: ${DEFAULT_RADIUS} },`
+    );
+    document.getElementById("svOut").value =
+      "const SPOTS = {" + (rows.length ? "\n" + rows.join("\n") + "\n" : "") + "};";
+  };
+  paint();
+
+  navigator.geolocation.watchPosition(p => {
+    here = { lat: p.coords.latitude, lng: p.coords.longitude, acc: p.coords.accuracy };
+    document.getElementById("svNow").textContent =
+      `${here.lat.toFixed(6)}, ${here.lng.toFixed(6)}（誤差 約${Math.round(here.acc)}m）`;
+  }, err => {
+    document.getElementById("svNow").textContent = `取得できません（${err.message}）`;
+  }, { enableHighAccuracy: true, maximumAge: 0 });
+
+  document.getElementById("svRec").addEventListener("click", () => {
+    if (!here) { alert("まだ現在地を取得できていません。"); return; }
+    recorded[sel.value] = here;
+    paint();
+  });
+  document.getElementById("svCopy").addEventListener("click", async () => {
+    const text = document.getElementById("svOut").value;
+    try { await navigator.clipboard.writeText(text); alert("コピーしました。"); }
+    catch { alert("コピーできませんでした。手動で選択してください。"); }
+  });
+  document.getElementById("svClose").addEventListener("click", () => { panel.hidden = true; });
+}
+
 initCells();
 render();
+
+if (location.search.includes("spots")) startSurvey();
 
 // ロゴとフォントが揃った時点でスタンプを作り直す
 loadImage(LOGO_SRC).then(img => {
