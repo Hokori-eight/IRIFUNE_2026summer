@@ -57,17 +57,21 @@
     font-weight: 500;
   }
   /* 画面が低いときは盤面を縮めて、スクロールなしで収める */
+  /* マスの縦横比。ここを変えると画面も保存画像も一緒に変わります
+     （保存画像側は JS の CELL_RATIO も同じ値にしてください） */
   .board-wrap {
+    --cell-w: 3;
+    --cell-h: 4;
     position: relative;
-    width: min(100%, 420px, calc(100vh - 268px));
-    width: min(100%, 420px, calc(100dvh - 268px));
+    /* 盤面の高さ = 幅 × 縦横比 ＋ 余白24px。これが画面に収まる幅を選ぶ。
+       ただし 230px より縮めると、お題が読めなくなるのでそこで止める */
+    width: min(100%, 360px, max(230px, calc((100vh - 292px) * var(--cell-w) / var(--cell-h))));
+    width: min(100%, 360px, max(230px, calc((100dvh - 292px) * var(--cell-w) / var(--cell-h))));
   }
   .board {
     width: 100%;
-    aspect-ratio: 1 / 1;
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    grid-template-rows: repeat(3, 1fr);
     gap: 6px;
     background: var(--brown);
     padding: 6px;
@@ -88,6 +92,7 @@
   }
   .cell {
     position: relative;
+    aspect-ratio: var(--cell-w) / var(--cell-h);
     background: var(--base);
     border-radius: 8px;
     overflow: hidden;
@@ -356,6 +361,9 @@ const SPOTS = {
 const DEFAULT_RADIUS = 40;   // 許容距離のきほん値（m）
 const MAX_GPS_MARGIN = 30;   // GPS 誤差を大目に見る上限（m）
 const GEO_TIMEOUT = 12000;
+
+/* マスの縦横比（縦 ÷ 横）。CSS の --cell-w / --cell-h と同じ値にしてください */
+const CELL_RATIO = 4 / 3;
 
 const CENTER_INDEX = 4;
 const CENTER_LABEL = "発掘マス";
@@ -831,9 +839,11 @@ async function buildImage() {
   const GAP = 12 * k;
   const HEADER = 186 * k;
   const FOOTER = 156 * k;
-  const grid = W - PAD * 2;
-  const box = (grid - GAP * 2) / 3;
-  const H = Math.round(HEADER + grid + FOOTER);
+  const gridW = W - PAD * 2;
+  const boxW = (gridW - GAP * 2) / 3;
+  const boxH = boxW * CELL_RATIO;          // マスは縦長
+  const gridH = boxH * 3 + GAP * 2;
+  const H = Math.round(HEADER + gridH + FOOTER);
 
   const canvas = document.createElement("canvas");
   canvas.width = W;
@@ -875,37 +885,37 @@ async function buildImage() {
 
   // 盤面の下地
   ctx.fillStyle = C.brown;
-  roundRectPath(ctx, PAD - 9 * k, HEADER - 9 * k, grid + 18 * k, grid + 18 * k, 20 * k);
+  roundRectPath(ctx, PAD - 9 * k, HEADER - 9 * k, gridW + 18 * k, gridH + 18 * k, 20 * k);
   ctx.fill();
 
   const imgs = await Promise.all(cells.map(c => c.photo ? loadImage(c.photo) : null));
 
   cells.forEach((cell, i) => {
-    const x = PAD + (i % 3) * (box + GAP);
-    const y = HEADER + Math.floor(i / 3) * (box + GAP);
+    const x = PAD + (i % 3) * (boxW + GAP);
+    const y = HEADER + Math.floor(i / 3) * (boxH + GAP);
     const img = imgs[i];
 
     ctx.save();
-    roundRectPath(ctx, x, y, box, box, 12 * k);
+    roundRectPath(ctx, x, y, boxW, boxH, 12 * k);
     ctx.clip();
 
     if (img) {
-      drawPhotoCover(ctx, img, x, y, box, box);
+      drawPhotoCover(ctx, img, x, y, boxW, boxH);
       const bandH = 64 * k;
-      const grad = ctx.createLinearGradient(0, y + box - bandH, 0, y + box);
+      const grad = ctx.createLinearGradient(0, y + boxH - bandH, 0, y + boxH);
       grad.addColorStop(0, "rgba(70,40,20,0)");
       grad.addColorStop(1, "rgba(70,40,20,0.93)");
       ctx.fillStyle = grad;
-      ctx.fillRect(x, y + box - bandH, box, bandH);
+      ctx.fillRect(x, y + boxH - bandH, boxW, bandH);
       ctx.fillStyle = C.base;
       ctx.font = `500 ${21 * k}px Inter, "Noto Sans JP", sans-serif`;
-      drawCenteredText(ctx, cell.topic || CENTER_LABEL, x + box / 2, y + box - 26 * k, box - 20 * k, 24 * k);
+      drawCenteredText(ctx, cell.topic || CENTER_LABEL, x + boxW / 2, y + boxH - 26 * k, boxW - 20 * k, 24 * k);
     } else {
       ctx.fillStyle = cell.isCenter ? C.land : C.base;
-      ctx.fillRect(x, y, box, box);
+      ctx.fillRect(x, y, boxW, boxH);
       ctx.fillStyle = C.brown;
       ctx.font = `500 ${26 * k}px Inter, "Noto Sans JP", sans-serif`;
-      drawCenteredText(ctx, cell.topic || (cell.isCenter ? CENTER_LABEL : ""), x + box / 2, y + box / 2, box - 34 * k, 34 * k);
+      drawCenteredText(ctx, cell.topic || (cell.isCenter ? CENTER_LABEL : ""), x + boxW / 2, y + boxH / 2, boxW - 34 * k, 34 * k);
     }
     ctx.restore();
   });
@@ -913,7 +923,7 @@ async function buildImage() {
   // フッター（ハッシュタグはタイトルと重複するので置かない）
   const d = new Date();
   const dateStr = `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
-  const fy = HEADER + grid;
+  const fy = HEADER + gridH;
 
   ctx.fillStyle = C.gray;
   ctx.font = `500 ${23 * k}px Inter, "Noto Sans JP", sans-serif`;
