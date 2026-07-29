@@ -223,6 +223,15 @@
     padding: 0 10px 8px;
     white-space: pre-line;
   }
+  /* 現地判定の見出しだけは、探検の手応えが出るよう大きく出す */
+  #geoTitle {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--brown);
+    letter-spacing: 0.02em;
+    padding: 14px 4px 8px;
+  }
+  #geoTitle .hit { color: var(--stamp); }
 
   /* 現地判定に合格したマスの印 */
   .cell .geo-ok {
@@ -313,7 +322,7 @@
     <div class="sheet-title" id="geoTitle"></div>
     <div class="sheet-note"  id="geoNote"></div>
     <button class="primary" id="geoShootBtn" hidden>撮影する</button>
-    <button class="plain"   id="geoRetryBtn" hidden>もう一度確認する</button>
+    <button class="plain"   id="geoRetryBtn" hidden>もう一度さがす</button>
     <button class="quiet"   id="geoAnywayBtn" hidden>このまま撮影する</button>
     <button class="quiet"   id="geoCancelBtn">キャンセル</button>
   </div>
@@ -639,6 +648,19 @@ function render() {
 let geoIndex = null;
 let geoPassed = false;
 
+/* 見出しの頭だけ朱色にする。お題名は textContent で入れる（HTML として解釈させない） */
+function setGeoTitle(hit, rest) {
+  const title = document.getElementById("geoTitle");
+  title.textContent = "";
+  if (hit) {
+    const span = document.createElement("span");
+    span.className = "hit";
+    span.textContent = hit;
+    title.appendChild(span);
+  }
+  title.appendChild(document.createTextNode(rest));
+}
+
 function setGeoButtons(shoot, retry, anyway) {
   document.getElementById("geoShootBtn").hidden  = !shoot;
   document.getElementById("geoRetryBtn").hidden  = !retry;
@@ -664,8 +686,8 @@ async function runGeoCheck() {
   const note  = document.getElementById("geoNote");
 
   geoPassed = false;
-  title.textContent = `${name}… 現在地を確認しています`;
-  note.textContent = "屋外のほうが正確に測れます。";
+  setGeoTitle("", `${name} を探索中…`);
+  note.textContent = "現在地をたしかめています。\n屋外のほうが正確に測れます。";
   setGeoButtons(false, false, false);
 
   let pos;
@@ -673,7 +695,7 @@ async function runGeoCheck() {
     pos = await currentPosition();
   } catch (err) {
     if (geoIndex !== index) return;   // 待っている間に閉じられた
-    title.textContent = "現在地が わかりませんでした";
+    setGeoTitle("", "現在地を見失いました");
     note.textContent = (err && err.code === 1)
       ? "位置情報の利用が許可されていないようです。\nブラウザの設定で許可すると、現地の判定ができます。"
       : "電波や建物の影響かもしれません。\n少し場所を移して、もう一度どうぞ。";
@@ -689,12 +711,12 @@ async function runGeoCheck() {
 
   if (dist - margin <= radius) {
     geoPassed = true;
-    title.textContent = `正解！ ${name}に到着しました`;
-    note.textContent  = `目標まで約 ${formatDistance(dist)}`;
+    setGeoTitle("到達！ ", name);
+    note.textContent = "発掘ポイントに立っています。\nさあ、記録しましょう。";
     setGeoButtons(true, false, false);
   } else {
-    title.textContent = `${name}は もう少し先のようです`;
-    note.textContent  = `あと約 ${formatDistance(dist - radius)}。\n近づいたら、もう一度どうぞ。`;
+    setGeoTitle("接近中！ ", `あと約 ${formatDistance(dist - radius)}`);
+    note.textContent = `${name}は この先にあります。\n近づいたら、もう一度どうぞ。`;
     setGeoButtons(false, true, true);
   }
 }
