@@ -5,9 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>#勝山発掘まちあるき | IRIFUNE</title>
 <meta name="theme-color" content="#FFFDF3">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
   :root {
     /* IRIFUNE ブランドトークン */
@@ -18,11 +15,18 @@
     --sea:   #4F9282;
     --gray:  #727171;
     --stamp: #C0453C;  /* CLEAR スタンプの朱色 */
+
+    /* 端末に入っているフォントだけを使う。取りに行かないので、
+       電波の弱い路地でも文字が崩れず、外部への通信も発生しません。
+       （JS の FONT_STACK も同じ並びにしてください） */
+    --ui-font: -apple-system, BlinkMacSystemFont, "Hiragino Sans",
+               "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic",
+               "Segoe UI", Roboto, sans-serif;
   }
   * { box-sizing: border-box; }
   body {
     margin: 0;
-    font-family: Inter, "Noto Sans JP", -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: var(--ui-font);
     background: var(--base);
     color: var(--brown);
     min-height: 100vh;
@@ -330,6 +334,16 @@
 
 <div id="survey" hidden></div>
 
+<div class="sheet-back" id="keepBack" hidden>
+  <div class="sheet">
+    <div class="sheet-title" id="keepTitle"></div>
+    <div class="sheet-note">この写真は写真アプリには残りません。
+いま端末に保存しておくと安心です。</div>
+    <button class="primary" id="keepSaveBtn">この写真を端末に保存</button>
+    <button class="quiet"   id="keepSkipBtn">あとでまとめて</button>
+  </div>
+</div>
+
 <div class="sheet-back" id="sheetBack" hidden>
   <div class="sheet">
     <div class="sheet-title" id="sheetTitle"></div>
@@ -379,6 +393,11 @@ const SPOTS = {
 const DEFAULT_RADIUS = 10;   // 許容距離のきほん値（m）。歩いて近づく前提の狭さ
 const MAX_GPS_MARGIN = 30;   // GPS 誤差を大目に見る上限（m）
 const GEO_TIMEOUT = 12000;
+
+/* 保存画像で使うフォント。CSS の --ui-font と同じ並びにしてください */
+const FONT_STACK = '-apple-system, BlinkMacSystemFont, "Hiragino Sans", ' +
+                   '"Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic", ' +
+                   '"Segoe UI", Roboto, sans-serif';
 
 /* マスの縦横比（縦 ÷ 横）。CSS の --cell-w / --cell-h と同じ値にしてください */
 const CELL_RATIO = 4 / 3;
@@ -635,6 +654,8 @@ function render() {
       cell.file = file;
       cell.photo = await toDisplayDataUrl(file);
       render();
+      // 撮った直後だけ、端末に残す機会を一度つくる
+      if (cell.photo) openKeep(index);
     });
     div.appendChild(fileInput);
 
@@ -808,6 +829,46 @@ document.getElementById("savePhotoBtn").addEventListener("click", async () => {
   }
 });
 
+/* ---------- 撮った直後のひきとめ ----------
+   file input で撮った写真は写真アプリに残らないので、
+   1枚ごとに端末へ保存する機会をつくる。押さなくても先へ進める。 */
+
+let keepIndex = null;
+
+function openKeep(index) {
+  keepIndex = index;
+  document.getElementById("keepTitle").textContent = photoLabel(cells[index]) + "を撮りました";
+  document.getElementById("keepBack").hidden = false;
+}
+
+function closeKeep() {
+  document.getElementById("keepBack").hidden = true;
+  keepIndex = null;
+}
+
+document.getElementById("keepSkipBtn").addEventListener("click", closeKeep);
+document.getElementById("keepBack").addEventListener("click", (e) => {
+  if (e.target.id === "keepBack") closeKeep();
+});
+
+document.getElementById("keepSaveBtn").addEventListener("click", async () => {
+  const cell = cells[keepIndex];
+  closeKeep();
+  if (!cell || !cell.file) return;
+  try {
+    await saveFileToDevice(cell.file, `katsuyama-${photoLabel(cell)}.jpg`);
+  } catch (err) {
+    if (err && err.name !== "AbortError") alert("保存できませんでした。もう一度お試しください。");
+  }
+});
+
+/* 写真は端末のどこにも残らないので、離れる前に一度だけ引き止める */
+window.addEventListener("beforeunload", (e) => {
+  if (!cells.some(c => c.photo)) return;
+  e.preventDefault();
+  e.returnValue = "";   // 古いブラウザはこの代入で警告が出る
+});
+
 /* ---------- 保存用のシート画像 ---------- */
 
 function roundRectPath(ctx, x, y, w, h, r) {
@@ -860,9 +921,7 @@ function drawPhotoCover(ctx, img, x, y, w, h) {
 }
 
 async function buildImage() {
-  await document.fonts.load('700 54px "Noto Sans JP"');
-  await document.fonts.load('500 26px "Noto Sans JP"');
-  await document.fonts.ready;
+  // 端末に入っているフォントだけを使うので、読み込みを待つ必要はありません
 
   // Instagram のフィードに収まる 4:5。この枠に合わせて盤面の大きさを決める
   const W = 1620;
@@ -896,7 +955,7 @@ async function buildImage() {
 
   // ヘッダー
   ctx.fillStyle = C.brown;
-  ctx.font = `700 ${54 * k}px Inter, "Noto Sans JP", sans-serif`;
+  ctx.font = `700 ${54 * k}px ${FONT_STACK}`;
   ctx.fillText(TITLE, W / 2, 62 * k);
 
   // 進捗バッジ。ビンゴしたら写真を隠さないよう、ここに文字で足す
@@ -904,7 +963,7 @@ async function buildImage() {
   const lines = bingoLines().length;
   const statusText = `${n} / 9 発掘`;
   const tagText = lines > 0 ? bingoLabel(lines, n) : "";
-  ctx.font = `700 ${26 * k}px Inter, "Noto Sans JP", sans-serif`;
+  ctx.font = `700 ${26 * k}px ${FONT_STACK}`;
   const sw = ctx.measureText(statusText).width;
   const gapW = tagText ? 16 * k : 0;
   const tw = tagText ? ctx.measureText(tagText).width : 0;
@@ -947,13 +1006,13 @@ async function buildImage() {
       ctx.fillStyle = grad;
       ctx.fillRect(x, y + boxH - bandH, boxW, bandH);
       ctx.fillStyle = C.base;
-      ctx.font = `500 ${21 * k}px Inter, "Noto Sans JP", sans-serif`;
+      ctx.font = `500 ${21 * k}px ${FONT_STACK}`;
       drawCenteredText(ctx, cell.topic || CENTER_LABEL, x + boxW / 2, y + boxH - 26 * k, boxW - 20 * k, 24 * k);
     } else {
       ctx.fillStyle = cell.isCenter ? C.land : C.base;
       ctx.fillRect(x, y, boxW, boxH);
       ctx.fillStyle = C.brown;
-      ctx.font = `500 ${26 * k}px Inter, "Noto Sans JP", sans-serif`;
+      ctx.font = `500 ${26 * k}px ${FONT_STACK}`;
       drawCenteredText(ctx, cell.topic || (cell.isCenter ? CENTER_LABEL : ""), x + boxW / 2, y + boxH / 2, boxW - 34 * k, 34 * k);
     }
     ctx.restore();
@@ -965,12 +1024,12 @@ async function buildImage() {
   const fy = TOP + gridH;
 
   ctx.fillStyle = C.gray;
-  ctx.font = `500 ${23 * k}px Inter, "Noto Sans JP", sans-serif`;
+  ctx.font = `500 ${23 * k}px ${FONT_STACK}`;
   ctx.fillText(`${dateStr}　福井県勝山市`, W / 2, fy + 42 * k);
 
   // ロゴ＋ハウスネームを最下部に置く
   ctx.fillStyle = C.brown;
-  ctx.font = `500 ${24 * k}px Inter, "Noto Sans JP", sans-serif`;
+  ctx.font = `500 ${24 * k}px ${FONT_STACK}`;
   const houseText = SUBTITLE;
   const logoSize = 34 * k;
   const textW = ctx.measureText(houseText).width;
