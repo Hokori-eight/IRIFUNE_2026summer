@@ -392,6 +392,7 @@ const SPOTS = {
 };
 const DEFAULT_RADIUS = 10;   // 許容距離のきほん値（m）。歩いて近づく前提の狭さ
 const MAX_GPS_MARGIN = 30;   // GPS 誤差を大目に見る上限（m）
+const COARSE_ACC = 100;      // これより誤差が大きいと、そもそも判定が成り立たない（m）
 const GEO_TIMEOUT = 12000;
 
 /* 保存画像で使うフォント。CSS の --ui-font と同じ並びにしてください */
@@ -733,6 +734,19 @@ async function runGeoCheck() {
     return;
   }
   if (geoIndex !== index) return;
+
+  /* 誤差が大きすぎるときは、距離を比べても意味がない。
+     「近づいてもずっと接近中」になる前に、原因のほうを伝える */
+  if (pos.acc && pos.acc > COARSE_ACC) {
+    setGeoTitle("", "位置がぼんやりしています");
+    note.textContent =
+      `いまの誤差は約 ${formatDistance(pos.acc)} あります。\n` +
+      "iPhone は 設定 → プライバシーとセキュリティ → 位置情報サービス → Safari で" +
+      "「正確な位置情報」をオンにすると、判定できるようになります。\n" +
+      "建物の中や地下でも粗くなります。";
+    setGeoButtons(false, true, true);
+    return;
+  }
 
   const dist   = distanceToSpot(pos, spot);
   const radius = spot.r || DEFAULT_RADIUS;
