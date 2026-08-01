@@ -228,7 +228,7 @@
     white-space: pre-line;
   }
   /* 現地判定の見出しだけは、探検の手応えが出るよう大きく出す */
-  #geoTitle {
+  #geoTitle, #introTitle {
     font-size: 17px;
     font-weight: 700;
     color: var(--brown);
@@ -334,6 +334,15 @@
 
 <div id="survey" hidden></div>
 
+<div class="sheet-back" id="introBack" hidden>
+  <div class="sheet">
+    <div class="sheet-title" id="introTitle"></div>
+    <div class="sheet-note"  id="introNote"></div>
+    <button class="primary" id="introAllowBtn" hidden>位置情報を許可する</button>
+    <button class="quiet"   id="introLaterBtn">あとで決める</button>
+  </div>
+</div>
+
 <div class="sheet-back" id="keepBack" hidden>
   <div class="sheet">
     <div class="sheet-title" id="keepTitle"></div>
@@ -357,13 +366,13 @@
 /* 改行したい位置に \n を入れると、その位置で必ず折り返します */
 const TOPICS = [
   "大清水",
-  "ダイナ荘",
+  "白亜紀\nダイナ荘",
   "恐竜\nマンホール",
   "消火栓モグラ",
   "恐竜ポスト",
   "七里壁",
   "入船電柱",
-  "梅から生える\n松の木"
+  "松梅"
 ];
 
 /* お題ごとの現地判定。キーは TOPICS と同じ文字列にします。
@@ -376,8 +385,8 @@ const TOPICS = [
 const SPOTS = {
   "大清水":          { lat: 36.060301, lng: 136.497602 },
   "入船電柱":        { lat: 36.060784, lng: 136.497514 },
-  "梅から生える\n松の木": { lat: 36.060703, lng: 136.497202 },
-  "ダイナ荘":        { lat: 36.060059, lng: 136.499091 },
+  "松梅":            { lat: 36.060703, lng: 136.497202 },
+  "白亜紀\nダイナ荘": { lat: 36.060059, lng: 136.499091 },
   "消火栓モグラ":    { lat: 36.061901, lng: 136.498362 },
   "恐竜ポスト":      { lat: 36.058741, lng: 136.497270 },
   "恐竜\nマンホール": { any: [
@@ -843,6 +852,65 @@ document.getElementById("savePhotoBtn").addEventListener("click", async () => {
   }
 });
 
+/* ---------- はじめの案内（位置情報のこと） ----------
+   ブラウザの許可ダイアログは、出たその場でしか押せません。
+   何に使うのかを先に伝えておくと、とっさに「許可しない」を選ばずに済みます。
+   ※ Web ページから端末の設定画面へ移動させることはできないので、
+      すでに拒否されている場合は、設定の場所を文字で案内します。 */
+
+const SETTINGS_HINT =
+  "iPhone：アドレスバーの「ぁあ」→ Webサイトの設定 → 位置情報 →「確認」\n" +
+  "Android：アドレスバーの鍵アイコン → 権限 → 現在地";
+
+async function geoPermissionState() {
+  if (!navigator.permissions || !navigator.permissions.query) return "unknown";
+  try {
+    const s = await navigator.permissions.query({ name: "geolocation" });
+    return s.state;                       // granted / denied / prompt
+  } catch {
+    return "unknown";                     // 問い合わせ自体に未対応の端末
+  }
+}
+
+function closeIntro() { document.getElementById("introBack").hidden = true; }
+
+async function startIntro() {
+  if (!navigator.geolocation) return;     // 使えない端末では黙っておく
+  const state = await geoPermissionState();
+  if (state === "granted") return;        // すでに許可済みなら邪魔をしない
+
+  const title = document.getElementById("introTitle");
+  const note  = document.getElementById("introNote");
+  const allow = document.getElementById("introAllowBtn");
+  const later = document.getElementById("introLaterBtn");
+
+  if (state === "denied") {
+    // この状態では、もう一度たずねてもブラウザのダイアログは出ない
+    title.textContent = "位置情報がオフになっています";
+    note.textContent =
+      "お題の場所に着いたかどうかを確かめられません。\n" +
+      "撮影はこのままでもできます。\n\n" + SETTINGS_HINT;
+    allow.hidden = true;
+    later.textContent = "このまま始める";
+  } else {
+    title.textContent = "位置情報を使います";
+    note.textContent =
+      "お題の場所に着いたかどうかを確かめるためだけに使います。\n" +
+      "現在地も写真も、どこにも送りません。記録も残しません。\n\n" +
+      "次に出るブラウザの確認で「許可」を選んでください。";
+    allow.hidden = false;
+    later.textContent = "あとで決める";
+  }
+  document.getElementById("introBack").hidden = false;
+}
+
+document.getElementById("introLaterBtn").addEventListener("click", closeIntro);
+document.getElementById("introAllowBtn").addEventListener("click", () => {
+  closeIntro();
+  // ここで初めてブラウザの確認ダイアログが出る。結果はこの場では使わない
+  currentPosition().catch(() => {});
+});
+
 /* ---------- 撮った直後のひきとめ ----------
    file input で撮った写真は写真アプリに残らないので、
    1枚ごとに端末へ保存する機会をつくる。押さなくても先へ進める。 */
@@ -1230,6 +1298,7 @@ initCells();
 render();
 
 if (location.search.includes("spots")) startSurvey();
+else startIntro();   // 下見モードのときは案内を出さない
 
 // 保存画像のフッターで使うロゴを、濃茶に染めて用意しておく
 loadImage(LOGO_SRC).then(img => {
