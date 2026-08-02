@@ -219,6 +219,14 @@
   .sheet .primary { background: var(--sea); color: #fff; }
   .sheet .plain   { background: transparent; color: var(--brown); box-shadow: inset 0 0 0 1.5px var(--brown); }
   .sheet .quiet   { background: transparent; color: var(--gray); font-weight: 500; }
+  /* 用途の但し書きは、ボタンの中に一段小さく添える */
+  .sheet button small {
+    display: block;
+    font-size: 11px;
+    font-weight: 500;
+    opacity: 0.82;
+    margin-top: 2px;
+  }
   .sheet .sheet-note {
     text-align: center;
     font-size: 11px;
@@ -315,7 +323,8 @@
 <div class="sheet-back" id="saveBack" hidden>
   <div class="sheet">
     <div class="sheet-title">保存するものを選んでください</div>
-    <button class="primary" id="saveSheetBtn">ビンゴシートを保存</button>
+    <button class="primary" id="saveFeedBtn">ビンゴシート<small>フィード用 4:5</small></button>
+    <button class="primary" id="saveStoryBtn">ビンゴシート<small>ストーリーズ用 9:16</small></button>
     <button class="plain"   id="saveAllBtn">撮った写真をまとめて保存</button>
     <button class="quiet"   id="saveCancelBtn">キャンセル</button>
   </div>
@@ -1002,28 +1011,130 @@ function drawPhotoCover(ctx, img, x, y, w, h) {
   ctx.drawImage(img, sx, sy, sw, sh, x, y, w, h);
 }
 
-async function buildImage() {
+/* 保存画像の形。Instagram の投稿枠に合わせてあります */
+const SHEET_FORMATS = {
+  feed:  { w: 1620, h: 2025, name: "katsuyama-hakkutsu.jpg" },        // 4:5
+  story: { w: 1620, h: 2880, name: "katsuyama-hakkutsu-story.jpg" }   // 9:16
+};
+
+/* 9マスを描く。文字の大きさはマスの幅から決めるので、
+   どちらの形でも同じ見え方になります */
+function drawGrid(ctx, imgs, opt) {
+  const { x0, y0, boxW, boxH, gap } = opt;
+  const radius = opt.radius !== undefined ? opt.radius : boxW * 0.031;
+  const label = opt.label || "band";   // band = 帯を敷く / shadow = 影をつけて写真に直接のせる
+
+  cells.forEach((cell, i) => {
+    const x = x0 + (i % 3) * (boxW + gap);
+    const y = y0 + Math.floor(i / 3) * (boxH + gap);
+    const img = imgs[i];
+
+    ctx.save();
+    roundRectPath(ctx, x, y, boxW, boxH, radius);
+    ctx.clip();
+
+    if (img) {
+      drawPhotoCover(ctx, img, x, y, boxW, boxH);
+
+      if (label === "shadow") {
+        // 帯を敷かず、影だけで文字を浮かせる。写真がぶつ切りにならない
+        ctx.shadowColor = "rgba(28,12,3,0.95)";
+        ctx.shadowBlur = boxW * 0.070;
+        ctx.shadowOffsetY = boxW * 0.007;
+        ctx.fillStyle = "#fff";
+        ctx.font = `700 ${boxW * 0.085}px ${FONT_STACK}`;
+        // 三度重ねて、白飛びした写真の上でも文字が沈まないようにする
+        for (let pass = 0; pass < 3; pass++) {
+          drawCenteredText(ctx, cell.topic || CENTER_LABEL,
+            x + boxW / 2, y + boxH - boxW * 0.105, boxW * 0.90, boxW * 0.098);
+        }
+        ctx.shadowColor = "transparent";
+      } else {
+        const bandH = boxW * 0.245;
+        const grad = ctx.createLinearGradient(0, y + boxH - bandH, 0, y + boxH);
+        grad.addColorStop(0, "rgba(70,40,20,0)");
+        grad.addColorStop(1, "rgba(70,40,20,0.93)");
+        ctx.fillStyle = grad;
+        ctx.fillRect(x, y + boxH - bandH, boxW, bandH);
+        ctx.fillStyle = C.base;
+        ctx.font = `500 ${boxW * 0.080}px ${FONT_STACK}`;
+        drawCenteredText(ctx, cell.topic || CENTER_LABEL,
+          x + boxW / 2, y + boxH - boxW * 0.0995, boxW * 0.949, boxW * 0.092);
+      }
+    } else {
+      ctx.fillStyle = cell.isCenter ? C.land : C.base;
+      ctx.fillRect(x, y, boxW, boxH);
+      // 隙間がないときは、空きマス同士の境目が消えるので細い線で仕切る
+      if (gap === 0) {
+        ctx.strokeStyle = "rgba(70,40,20,0.22)";
+        ctx.lineWidth = boxW * 0.006;
+        ctx.strokeRect(x + ctx.lineWidth / 2, y + ctx.lineWidth / 2,
+                       boxW - ctx.lineWidth, boxH - ctx.lineWidth);
+      }
+      ctx.fillStyle = C.brown;
+      ctx.font = `500 ${boxW * 0.0995}px ${FONT_STACK}`;
+      drawCenteredText(ctx, cell.topic || (cell.isCenter ? CENTER_LABEL : ""),
+        x + boxW / 2, y + boxH / 2, boxW * 0.913, boxW * 0.130);
+    }
+    ctx.restore();
+  });
+}
+
+/* 進捗バッジ。ビンゴしたら写真を隠さないよう、ここに文字で足す */
+function drawBadge(ctx, cx, top, k) {
+  const n = filledCount();
+  const lines = bingoLines().length;
+  const statusText = `${n} / 9 発掘`;
+  const tagText = lines > 0 ? bingoLabel(lines, n) : "";
+
+  ctx.font = `700 ${26 * k}px ${FONT_STACK}`;
+  const sw = ctx.measureText(statusText).width;
+  const gapW = tagText ? 16 * k : 0;
+  const tw = tagText ? ctx.measureText(tagText).width : 0;
+  const bw = sw + gapW + tw + 46 * k;
+  const bh = 44 * k, bx = cx - bw / 2;
+
+  ctx.fillStyle = C.land;
+  roundRectPath(ctx, bx, top, bw, bh, bh / 2);
+  ctx.fill();
+  ctx.textAlign = "left";
+  ctx.fillStyle = C.brown;
+  ctx.fillText(statusText, bx + 23 * k, top + bh / 2 + 1);
+  if (tagText) {
+    ctx.fillStyle = C.stamp;
+    ctx.fillText(tagText, bx + 23 * k + sw + gapW, top + bh / 2 + 1);
+  }
+  ctx.textAlign = "center";
+  return bh;
+}
+
+/* 日付とハウスネーム。fy は盤面の下端 */
+function drawFooter(ctx, W, fy, k) {
+  const d = new Date();
+  const dateStr = `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
+
+  ctx.fillStyle = C.gray;
+  ctx.font = `500 ${23 * k}px ${FONT_STACK}`;
+  ctx.fillText(`${dateStr}　福井県勝山市`, W / 2, fy + 42 * k);
+
+  ctx.fillStyle = C.brown;
+  ctx.font = `500 ${24 * k}px ${FONT_STACK}`;
+  const logoSize = 34 * k;
+  const textW = ctx.measureText(SUBTITLE).width;
+  const totalW = (logoBrown ? logoSize + 12 * k : 0) + textW;
+  const startX = (W - totalW) / 2;
+  const houseY = fy + 88 * k;
+  if (logoBrown) ctx.drawImage(logoBrown, startX, houseY - logoSize / 2, logoSize, logoSize);
+  ctx.textAlign = "left";
+  ctx.fillText(SUBTITLE, startX + (logoBrown ? logoSize + 12 * k : 0), houseY);
+  ctx.textAlign = "center";
+}
+
+async function buildImage(format = "feed") {
   // 端末に入っているフォントだけを使うので、読み込みを待つ必要はありません
-
-  // Instagram のフィードに収まる 4:5。この枠に合わせて盤面の大きさを決める
-  const W = 1620;
-  const H = Math.round(W * 5 / 4);
+  const spec = SHEET_FORMATS[format] || SHEET_FORMATS.feed;
+  const W = spec.w, H = spec.h;
   const k = W / 1080;        // 従来比の拡大率
-  const GAP = 12 * k;
-  const HEADER = 168 * k;
-  const FOOTER = 112 * k;
-
-  const room = H - HEADER - FOOTER;          // 盤面に使える高さ
-  let boxH = (room - GAP * 2) / 3;
-  let boxW = boxH / CELL_RATIO;
-  // 横にはみ出すなら幅のほうで決め直す（マスが横長寄りのときの保険）
-  const maxBoxW = (W - 88 * k - GAP * 2) / 3;
-  if (boxW > maxBoxW) { boxW = maxBoxW; boxH = boxW * CELL_RATIO; }
-
-  const gridW = boxW * 3 + GAP * 2;
-  const gridH = boxH * 3 + GAP * 2;
-  const PAD = (W - gridW) / 2;               // 左右は自動で振り分ける
-  const TOP = HEADER + (room - gridH) / 2;   // 余りが出たら上下にも振り分ける
 
   const canvas = document.createElement("canvas");
   canvas.width = W;
@@ -1035,95 +1146,57 @@ async function buildImage() {
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
 
-  // ヘッダー
-  ctx.fillStyle = C.brown;
-  ctx.font = `700 ${54 * k}px ${FONT_STACK}`;
-  ctx.fillText(TITLE, W / 2, 62 * k);
-
-  // 進捗バッジ。ビンゴしたら写真を隠さないよう、ここに文字で足す
-  const n = filledCount();
-  const lines = bingoLines().length;
-  const statusText = `${n} / 9 発掘`;
-  const tagText = lines > 0 ? bingoLabel(lines, n) : "";
-  ctx.font = `700 ${26 * k}px ${FONT_STACK}`;
-  const sw = ctx.measureText(statusText).width;
-  const gapW = tagText ? 16 * k : 0;
-  const tw = tagText ? ctx.measureText(tagText).width : 0;
-  const bw = sw + gapW + tw + 46 * k;
-  const bh = 44 * k, bx = (W - bw) / 2, by = 106 * k;
-  ctx.fillStyle = C.land;
-  roundRectPath(ctx, bx, by, bw, bh, bh / 2);
-  ctx.fill();
-  ctx.textAlign = "left";
-  ctx.fillStyle = C.brown;
-  ctx.fillText(statusText, bx + 23 * k, by + bh / 2 + 1);
-  if (tagText) {
-    ctx.fillStyle = C.stamp;
-    ctx.fillText(tagText, bx + 23 * k + sw + gapW, by + bh / 2 + 1);
-  }
-  ctx.textAlign = "center";
-
-  // 盤面の下地
-  ctx.fillStyle = C.brown;
-  roundRectPath(ctx, PAD - 9 * k, TOP - 9 * k, gridW + 18 * k, gridH + 18 * k, 20 * k);
-  ctx.fill();
-
   const imgs = await Promise.all(cells.map(c => c.photo ? loadImage(c.photo) : null));
 
-  cells.forEach((cell, i) => {
-    const x = PAD + (i % 3) * (boxW + GAP);
-    const y = TOP + Math.floor(i / 3) * (boxH + GAP);
-    const img = imgs[i];
+  if (format === "story") {
+    /* ストーリーズ用。9マスを画面の幅いっぱいに、隙間なく敷きつめる */
+    const GAP = 0;
+    const boxW = W / 3;
+    const boxH = boxW * CELL_RATIO;
+    const gridH = boxH * 3 + GAP * 2;
+    const TOP = Math.round((H - gridH) * 0.60);   // 上をやや広くとって題字を大きく置く
 
-    ctx.save();
-    roundRectPath(ctx, x, y, boxW, boxH, 12 * k);
-    ctx.clip();
+    ctx.fillStyle = C.brown;
+    ctx.font = `700 ${78 * k}px ${FONT_STACK}`;
+    ctx.fillText(TITLE, W / 2, TOP - 200 * k);
+    drawBadge(ctx, W / 2, TOP - 120 * k, k * 1.35);
 
-    if (img) {
-      drawPhotoCover(ctx, img, x, y, boxW, boxH);
-      const bandH = 64 * k;
-      const grad = ctx.createLinearGradient(0, y + boxH - bandH, 0, y + boxH);
-      grad.addColorStop(0, "rgba(70,40,20,0)");
-      grad.addColorStop(1, "rgba(70,40,20,0.93)");
-      ctx.fillStyle = grad;
-      ctx.fillRect(x, y + boxH - bandH, boxW, bandH);
-      ctx.fillStyle = C.base;
-      ctx.font = `500 ${21 * k}px ${FONT_STACK}`;
-      drawCenteredText(ctx, cell.topic || CENTER_LABEL, x + boxW / 2, y + boxH - 26 * k, boxW - 20 * k, 24 * k);
-    } else {
-      ctx.fillStyle = cell.isCenter ? C.land : C.base;
-      ctx.fillRect(x, y, boxW, boxH);
-      ctx.fillStyle = C.brown;
-      ctx.font = `500 ${26 * k}px ${FONT_STACK}`;
-      drawCenteredText(ctx, cell.topic || (cell.isCenter ? CENTER_LABEL : ""), x + boxW / 2, y + boxH / 2, boxW - 34 * k, 34 * k);
-    }
-    ctx.restore();
-  });
+    // 隙間も枠もなし。写真どうしが直に接して、一枚の壁のように見える
+    drawGrid(ctx, imgs, {
+      x0: 0, y0: TOP, boxW, boxH, gap: GAP, radius: 0, label: "shadow"
+    });
+    drawFooter(ctx, W, TOP + gridH + 22 * k, k * 1.2);
+  } else {
+    /* フィード用 4:5。この枠に収まるように盤面の大きさを決める */
+    const GAP = 12 * k;
+    const HEADER = 168 * k;
+    const FOOTER = 112 * k;
 
-  // フッター（ハッシュタグはタイトルと重複するので置かない）
-  const d = new Date();
-  const dateStr = `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
-  const fy = TOP + gridH;
+    const room = H - HEADER - FOOTER;          // 盤面に使える高さ
+    let boxH = (room - GAP * 2) / 3;
+    let boxW = boxH / CELL_RATIO;
+    // 横にはみ出すなら幅のほうで決め直す（マスが横長寄りのときの保険）
+    const maxBoxW = (W - 88 * k - GAP * 2) / 3;
+    if (boxW > maxBoxW) { boxW = maxBoxW; boxH = boxW * CELL_RATIO; }
 
-  ctx.fillStyle = C.gray;
-  ctx.font = `500 ${23 * k}px ${FONT_STACK}`;
-  ctx.fillText(`${dateStr}　福井県勝山市`, W / 2, fy + 42 * k);
+    const gridW = boxW * 3 + GAP * 2;
+    const gridH = boxH * 3 + GAP * 2;
+    const PAD = (W - gridW) / 2;               // 左右は自動で振り分ける
+    const TOP = HEADER + (room - gridH) / 2;   // 余りが出たら上下にも振り分ける
 
-  // ロゴ＋ハウスネームを最下部に置く
-  ctx.fillStyle = C.brown;
-  ctx.font = `500 ${24 * k}px ${FONT_STACK}`;
-  const houseText = SUBTITLE;
-  const logoSize = 34 * k;
-  const textW = ctx.measureText(houseText).width;
-  const totalW = (logoBrown ? logoSize + 12 * k : 0) + textW;
-  const startX = (W - totalW) / 2;
-  const houseY = fy + 88 * k;
-  if (logoBrown) {
-    ctx.drawImage(logoBrown, startX, houseY - logoSize / 2, logoSize, logoSize);
+    ctx.fillStyle = C.brown;
+    ctx.font = `700 ${54 * k}px ${FONT_STACK}`;
+    ctx.fillText(TITLE, W / 2, 62 * k);
+    drawBadge(ctx, W / 2, 106 * k, k);
+
+    // 盤面の下地
+    ctx.fillStyle = C.brown;
+    roundRectPath(ctx, PAD - 9 * k, TOP - 9 * k, gridW + 18 * k, gridH + 18 * k, 20 * k);
+    ctx.fill();
+
+    drawGrid(ctx, imgs, { x0: PAD, y0: TOP, boxW, boxH, gap: GAP });
+    drawFooter(ctx, W, TOP + gridH, k);
   }
-  ctx.textAlign = "left";
-  ctx.fillText(houseText, startX + (logoBrown ? logoSize + 12 * k : 0), houseY);
-  ctx.textAlign = "center";
 
   return new Promise(resolve => canvas.toBlob(resolve, "image/jpeg", 0.92));
 }
@@ -1179,22 +1252,23 @@ document.getElementById("saveAllBtn").addEventListener("click", async (e) => {
   }
 });
 
-document.getElementById("saveSheetBtn").addEventListener("click", async () => {
+async function saveSheet(format) {
   const btn = document.getElementById("saveBtn");
   const original = btn.textContent;
   closeSaveMenu();
   btn.disabled = true;
   btn.textContent = "作成中...";
   try {
-    const blob = await buildImage();
-    const file = new File([blob], "katsuyama-hakkutsu.jpg", { type: "image/jpeg" });
+    const spec = SHEET_FORMATS[format];
+    const blob = await buildImage(format);
+    const file = new File([blob], spec.name, { type: "image/jpeg" });
     const shareData = { files: [file], text: `勝山のまちを発掘してきた！\n${TITLE} #IRIFUNE #福井県勝山市` };
     if (navigator.canShare && navigator.canShare(shareData)) {
       await navigator.share(shareData);
     } else {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
-      a.download = "katsuyama-hakkutsu.jpg";
+      a.download = spec.name;
       a.href = url;
       a.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
@@ -1205,7 +1279,10 @@ document.getElementById("saveSheetBtn").addEventListener("click", async () => {
     btn.disabled = false;
     btn.textContent = original;
   }
-});
+}
+
+document.getElementById("saveFeedBtn").addEventListener("click", () => saveSheet("feed"));
+document.getElementById("saveStoryBtn").addEventListener("click", () => saveSheet("story"));
 
 document.getElementById("resetBtn").addEventListener("click", () => {
   if (confirm("お題をシャッフルして写真をすべて消去します。よろしいですか？")) {
