@@ -661,11 +661,23 @@ function render() {
     fileInput.addEventListener("change", async (e) => {
       const file = e.target.files[0];
       if (!file) return;
+      let photo;
+      try {
+        photo = await toDisplayDataUrl(file);
+      } catch {
+        /* 端末が読めない形式（古い機種の HEIC など）や、壊れたデータ。
+           黙って何も起きないと、参加者は原因にたどりつけない */
+        alert("この写真を読み込めませんでした。\nもう一度撮影するか、別の写真をお試しください。");
+        return;
+      } finally {
+        // 同じ写真をもう一度選んでも change が起きるようにしておく
+        e.target.value = "";
+      }
       cell.file = file;
-      cell.photo = await toDisplayDataUrl(file);
+      cell.photo = photo;
       render();
       // 撮った直後だけ、端末に残す機会を一度つくる
-      if (cell.photo) openKeep(index);
+      openKeep(index);
     });
     div.appendChild(fileInput);
 
