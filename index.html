@@ -70,8 +70,8 @@
     /* 盤面いがい（見出し・ボタン・注記・フッター）が縦に使う量を差し引いて、
        残りいっぱいまで盤面を広げる。差し引く値は実測に合わせてあります。
        ただし 230px より縮めると、お題が読めなくなるのでそこで止める */
-    width: min(100%, 420px, max(230px, calc((100vh - 224px) * var(--cell-w) / var(--cell-h))));
-    width: min(100%, 420px, max(230px, calc((100dvh - 224px) * var(--cell-w) / var(--cell-h))));
+    width: min(100%, 420px, max(230px, calc((100vh - 242px) * var(--cell-w) / var(--cell-h))));
+    width: min(100%, 420px, max(230px, calc((100dvh - 242px) * var(--cell-w) / var(--cell-h))));
   }
   .board {
     width: 100%;
@@ -305,7 +305,8 @@
 
 <p class="hint">
   マスをタップして撮影。<strong>もう一度タップ</strong>で端末に保存できます。<br>
-  中央は自由に決められる<strong>発掘マス</strong>。<strong>閉じても再読み込みしても消えます。</strong>
+  中央は自由に決められる<strong>発掘マス</strong>。<br>
+  <strong>ページを閉じたり、再読み込みしたりすると、すべてリセットされます。</strong>
 </p>
 
 <footer class="site-footer">
