@@ -33,13 +33,13 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 12px 16px;
+    padding: 10px 14px;
   }
-  header { text-align: center; margin: 0 0 10px; }
+  header { text-align: center; margin: 0 0 8px; }
   h1 { font-size: 20px; font-weight: 700; margin: 0; letter-spacing: 0.02em; }
   .site-footer {
-    margin-top: 12px;
-    padding-top: 10px;
+    margin-top: 9px;
+    padding-top: 8px;
     border-top: 1px solid rgba(70,40,20,0.14);
     width: 100%;
     max-width: 420px;
@@ -56,7 +56,7 @@
     max-width: 420px;
     width: 100%;
     text-align: center;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
     font-size: 13px;
     font-weight: 500;
   }
@@ -67,10 +67,11 @@
     --cell-w: 3;
     --cell-h: 4;
     position: relative;
-    /* 盤面の高さ = 幅 × 縦横比 ＋ 余白24px。これが画面に収まる幅を選ぶ。
+    /* 盤面いがい（見出し・ボタン・注記・フッター）が縦に使う量を差し引いて、
+       残りいっぱいまで盤面を広げる。差し引く値は実測に合わせてあります。
        ただし 230px より縮めると、お題が読めなくなるのでそこで止める */
-    width: min(100%, 360px, max(230px, calc((100vh - 292px) * var(--cell-w) / var(--cell-h))));
-    width: min(100%, 360px, max(230px, calc((100dvh - 292px) * var(--cell-w) / var(--cell-h))));
+    width: min(100%, 420px, max(230px, calc((100vh - 224px) * var(--cell-w) / var(--cell-h))));
+    width: min(100%, 420px, max(230px, calc((100dvh - 224px) * var(--cell-w) / var(--cell-h))));
   }
   .board {
     width: 100%;
@@ -159,7 +160,7 @@
   }
   .cell.center.has-photo input.topic-input { display: none; }
   .file-input { display: none; }
-  .controls { display: flex; gap: 10px; margin-top: 12px; width: 100%; max-width: 420px; }
+  .controls { display: flex; gap: 10px; margin-top: 10px; width: 100%; max-width: 420px; }
   button {
     padding: 13px 8px;
     font-size: 15px;
@@ -178,7 +179,7 @@
   #saveBtn { flex: 1; background: var(--sea); color: #fff; }
   #saveBtn:disabled { opacity: 0.5; }
   .hint {
-    margin: 10px 0 0;
+    margin: 8px 0 0;
     font-size: 11px;
     line-height: 1.65;
     color: var(--gray);
@@ -304,7 +305,7 @@
 
 <p class="hint">
   マスをタップして撮影。<strong>もう一度タップ</strong>で端末に保存できます。<br>
-  中央は自由に決められる<strong>発掘マス</strong>。<strong>ページを閉じると消えます。</strong>
+  中央は自由に決められる<strong>発掘マス</strong>。<strong>閉じても再読み込みしても消えます。</strong>
 </p>
 
 <footer class="site-footer">
