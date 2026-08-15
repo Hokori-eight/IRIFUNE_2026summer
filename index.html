@@ -5,6 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>#勝山発掘まちあるき | IRIFUNE</title>
 <meta name="theme-color" content="#FFFDF3">
+<!-- ホーム画面に追加したとき、ブラウザの枠なしで開くための設定 -->
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="勝山発掘">
 <style>
   :root {
     /* IRIFUNE ブランドトークン */
@@ -67,11 +74,11 @@
     --cell-w: 3;
     --cell-h: 4;
     position: relative;
-    /* 盤面いがい（見出し・ボタン・注記・フッター）が縦に使う量を差し引いて、
-       残りいっぱいまで盤面を広げる。差し引く値は実測に合わせてあります。
+    /* まずは CSS だけで概算しておき（読み込み直後のちらつき防止）、
+       そのあと JS の fitBoard() が実測して詰めます。
        ただし 230px より縮めると、お題が読めなくなるのでそこで止める */
-    width: min(100%, 420px, max(230px, calc((100vh - 242px) * var(--cell-w) / var(--cell-h))));
-    width: min(100%, 420px, max(230px, calc((100dvh - 242px) * var(--cell-w) / var(--cell-h))));
+    width: min(100%, 420px, max(230px, calc((100vh - 250px) * var(--cell-w) / var(--cell-h))));
+    width: min(100%, 420px, max(230px, calc((100dvh - 250px) * var(--cell-w) / var(--cell-h))));
   }
   .board {
     width: 100%;
@@ -873,9 +880,22 @@ document.getElementById("savePhotoBtn").addEventListener("click", async () => {
    ※ Web ページから端末の設定画面へ移動させることはできないので、
       すでに拒否されている場合は、設定の場所を文字で案内します。 */
 
-const SETTINGS_HINT =
-  "iPhone：アドレスバーの「ぁあ」→ Webサイトの設定 → 位置情報 →「確認」\n" +
-  "Android：アドレスバーの鍵アイコン → 権限 → 現在地";
+/* ホーム画面から開いているか。この場合はアドレスバーがなく、
+   そこから位置情報を戻す手順が使えないので、案内を変える */
+function isStandalone() {
+  return (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches)
+      || navigator.standalone === true;
+}
+
+function settingsHint() {
+  if (isStandalone()) {
+    return "設定 → プライバシーとセキュリティ → 位置情報サービス を確認してください。\n" +
+           "見当たらないときは、ホーム画面のアイコンを削除してから\n" +
+           "追加し直すと、もう一度たずねられます。";
+  }
+  return "iPhone：アドレスバーの「ぁあ」→ Webサイトの設定 → 位置情報 →「確認」\n" +
+         "Android：アドレスバーの鍵アイコン → 権限 → 現在地";
+}
 
 async function geoPermissionState() {
   if (!navigator.permissions || !navigator.permissions.query) return "unknown";
@@ -904,7 +924,7 @@ async function startIntro() {
     title.textContent = "位置情報がオフになっています";
     note.textContent =
       "お題の場所に着いたかどうかを確かめられません。\n" +
-      "撮影はこのままでもできます。\n\n" + SETTINGS_HINT;
+      "撮影はこのままでもできます。\n\n" + settingsHint();
     allow.hidden = true;
     later.textContent = "このまま始める";
   } else {
@@ -1309,8 +1329,42 @@ function startSurvey() {
   document.getElementById("svClose").addEventListener("click", () => { panel.hidden = true; });
 }
 
+/* ---------- 盤面の大きさを画面に合わせる ----------
+   盤面いがいが縦にどれだけ使うかは、画面の幅で変わります
+   （狭いと注記が折り返して行数が増える）。決め打ちの数値では当たらないので、
+   その場で測って、残りいっぱいまで盤面を広げます。 */
+function fitBoard() {
+  const wrap = document.querySelector(".board-wrap");
+  const cs = getComputedStyle(document.body);
+  const roomW = document.body.clientWidth
+    - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+
+  // 盤面をいったん畳んで、それ以外が使う高さだけを測る
+  const keepMin = document.body.style.minHeight;
+  document.body.style.minHeight = "0";
+  wrap.style.width = "0px";
+  const reserve = document.body.scrollHeight - wrap.getBoundingClientRect().height;
+  document.body.style.minHeight = keepMin;
+
+  const avail = window.innerHeight - reserve;
+  // 盤面の高さ = マス3つ ＋ すきま ＋ 枠。逆算して幅を出す
+  const frame = 24;
+  let w = (avail - frame) / CELL_RATIO + frame;
+  w = Math.min(roomW, 420, Math.max(230, w));
+  wrap.style.width = w + "px";
+
+  // 端数で少しはみ出したときだけ、一度だけ詰める
+  const over = document.body.scrollHeight - window.innerHeight;
+  if (over > 0) {
+    wrap.style.width = Math.max(230, w - over / CELL_RATIO) + "px";
+  }
+}
+
 initCells();
 render();
+fitBoard();
+addEventListener("resize", fitBoard);
+addEventListener("orientationchange", () => setTimeout(fitBoard, 200));
 
 if (location.search.includes("spots")) startSurvey();
 else startIntro();   // 下見モードのときは案内を出さない
